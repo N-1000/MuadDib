@@ -27,6 +27,12 @@ Nunca escribir un carácter invisible o no imprimible como literal en el código
 | Archivo | Función | Contrato |
 |---|---|---|
 | `normalizer.py` | `normalize(texto) -> str` | Pura. minúsculas, NFD + quitar diacríticos, **ñ protegida** (`año` ≠ `ano`). |
+| `lexicon.py` | `VERBOS_ACCION`, `CONECTORES`, `NEGACIONES` | Tres `frozenset[str]` cerrados, en la forma que produce `normalize`. |
+| `tripwire.py` | `detectar_senales(texto_normalizado) -> SenalTripwire` | Marca conector/negación presentes, sin interpretar. |
+| `splitter.py` | `dividir_por_conectores(texto_normalizado) -> list[str]` | Split literal en cláusulas por `CONECTORES`. |
+| `verb_variants.py` | `resolver_verbo(token) -> str \| None` | Infinitivo directo o vía variante escrita a mano (no stemming). |
+| `typo_fallback.py` | `corregir_typo(token, vocabulario) -> str \| None` | Fallback de typos (rapidfuzz); `None` si el match es ambiguo. |
+| `rules.py` | `analizar(mensaje) -> AnalisisNivel0` | Orquesta los cinco de arriba sobre un mensaje crudo, sin conocer `config` todavía. |
 | `entities.py` | `extract_entities(texto, config) -> dict` | Detecta por keyword contra un conjunto conocido en `config`. |
 | `embeddings.py` | `load_model()` | Carga una sola vez al iniciar, nunca por request. |
 | `embeddings.py` | `encode(texto) -> vector` | |
