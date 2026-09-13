@@ -41,6 +41,13 @@ def test_verbos_accion_contiene_casos_esperados():
         assert verbo in VERBOS_ACCION
 
 
+def test_verbo_con_ene_preserva_la_ene():
+    # Regresion: "anadir" (sin ñ) no es la palabra real y normalize()
+    # nunca la produce, porque preserva la ñ.
+    assert "añadir" in VERBOS_ACCION
+    assert "anadir" not in VERBOS_ACCION
+
+
 def test_conectores_contiene_casos_esperados():
     for conector in {"y", "pero", "tambien", "o"}:
         assert conector in CONECTORES

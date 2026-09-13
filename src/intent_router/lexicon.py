@@ -58,7 +58,7 @@ VERBOS_ACCION: frozenset[str] = frozenset(
         "ajustar",
         "configurar",
         "agregar",
-        "anadir",
+        "añadir",
         "quitar",
         "eliminar",
         "borrar",
