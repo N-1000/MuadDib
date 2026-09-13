@@ -55,6 +55,11 @@ def test_solo_espacios_devuelve_lista_vacia():
     assert dividir_por_conectores("   ") == []
 
 
+def test_conector_subordinante_no_divide():
+    texto = "reviso el sensor mientras esperas el reporte"
+    assert dividir_por_conectores(texto) == [texto]
+
+
 def test_integracion_con_tripwire():
     texto = "dame el reporte y activa la alerta"
     senal = detectar_senales(texto)

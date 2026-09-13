@@ -1,4 +1,4 @@
-"""Tres listas cerradas (verbos-accion, conectores, negaciones), en la misma forma que produce `normalize`."""
+"""Listas cerradas (verbos-accion, conectores, negaciones, determinantes), en la misma forma que produce `normalize`."""
 
 VERBOS_ACCION: frozenset[str] = frozenset(
     {
@@ -88,5 +88,47 @@ NEGACIONES: frozenset[str] = frozenset(
         "ningun",
         "ninguna",
         "ninguno",
+    }
+)
+
+CONECTORES_COORDINANTES: frozenset[str] = frozenset(
+    {
+        "y",
+        "tambien",
+        "ademas",
+        "o",
+        "pero",
+        "sino",
+        "aparte",
+        "asimismo",
+    }
+)
+
+DETERMINANTES: frozenset[str] = frozenset(
+    {
+        "el",
+        "la",
+        "los",
+        "las",
+        "un",
+        "una",
+        "unos",
+        "unas",
+        "mi",
+        "mis",
+        "tu",
+        "tus",
+        "su",
+        "sus",
+        "este",
+        "esta",
+        "estos",
+        "estas",
+        "ese",
+        "esa",
+        "esos",
+        "esas",
+        "del",
+        "al",
     }
 )

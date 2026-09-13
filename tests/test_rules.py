@@ -23,7 +23,15 @@ def test_mensaje_con_conector_divide_en_clausulas_con_su_propio_verbo():
 def test_negacion_se_marca_pero_no_se_interpreta():
     resultado = analizar("No quiero el reporte")
     assert resultado.senales.tiene_negacion is True
+    assert resultado.clausulas[0].negada is True
     assert resultado.clausulas[0].verbo == "querer"
+
+
+def test_negacion_es_por_clausula_no_global():
+    resultado = analizar("No quiero notificaciones pero mandame el reporte igual")
+    assert len(resultado.clausulas) == 2
+    assert resultado.clausulas[0].negada is True
+    assert resultado.clausulas[1].negada is False
 
 
 def test_prioriza_por_orden_no_por_tipo_de_match():
@@ -39,9 +47,23 @@ def test_clausula_sin_ningun_verbo_reconocido_da_none():
     assert resultado.clausulas[0].verbo is None
 
 
-def test_falso_positivo_conocido_sustantivo_con_forma_de_verbo():
-    # "alerta" es tambien un sustantivo comun (verb_variants.py lo documenta),
-    # asi que un mensaje sin verbo real puede corregirse igual via el
-    # fallback de typos: senal barata, no una confirmacion.
+def test_sustantivo_tras_determinante_no_se_confunde_con_verbo():
+    # "alerta" es tambien un verbo (ver verb_variants.py), pero aca es
+    # sustantivo: el token anterior ("la") es un determinante, asi que
+    # no se intenta resolver como verbo.
     resultado = analizar("La alerta de hoy")
+    assert resultado.clausulas[0].verbo is None
+
+
+def test_mismo_token_como_verbo_sin_determinante_antes_si_resuelve():
+    resultado = analizar("Alerta a los vecinos")
     assert resultado.clausulas[0].verbo == "alertar"
+
+
+def test_conector_sin_dos_clausulas_con_verbo_no_divide():
+    # Si el split no deja al menos dos clausulas con verbo propio, se
+    # trata el mensaje completo como una sola clausula en vez de partirlo
+    # en fragmentos sin sentido ("buenas tardes" no tiene verbo).
+    resultado = analizar("quiero el reporte y buenas tardes")
+    assert len(resultado.clausulas) == 1
+    assert resultado.clausulas[0].verbo == "querer"
