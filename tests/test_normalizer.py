@@ -20,6 +20,25 @@ def test_no_toca_puntuacion_ni_numeros():
     assert normalize("¿Cuánto contamina PM2.5 hoy?") == "¿cuanto contamina pm2.5 hoy?"
 
 
+def test_no_toca_emojis():
+    assert normalize("hola 😀 mundo") == "hola 😀 mundo"
+    assert normalize("📊📈 reporte") == "📊📈 reporte"
+
+
+def test_selector_de_variacion_se_pierde_como_cualquier_mn():
+    # "⚠️" son dos codepoints: la advertencia (So) + un selector de
+    # variacion (U+FE0F, categoria Mn). normalize() lo saca junto con
+    # los acentos porque es exactamente lo que hace: sacar todo lo Mn.
+    # El emoji base sobrevive; el selector no tiene valor semantico para
+    # clasificar intencion, asi que no hace falta protegerlo.
+    assert normalize("⚠️ atención") == "⚠ atencion"
+
+
+def test_emoji_no_rompe_idempotencia():
+    texto = normalize("el aire está 🟡 hoy, ojo 👀")
+    assert normalize(texto) == texto
+
+
 def test_trunca_a_longitud_maxima():
     texto = "a" * 100
     assert normalize(texto, longitud_maxima=10) == "a" * 10
