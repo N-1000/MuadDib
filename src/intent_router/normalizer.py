@@ -12,7 +12,7 @@ _ENIE_PLACEHOLDER = ""
 _CONTROL_CATEGORIES = {"Cc", "Cf"}
 
 
-def normalize_text(texto: str, *, longitud_maxima: int = 2000) -> str:
+def normalize(texto: str, *, longitud_maxima: int = 2000) -> str:
     """Normaliza texto de usuario: minusculas, sin diacriticos (menos la ñ),
     sin caracteres de control, truncado a longitud_maxima.
 
