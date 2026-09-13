@@ -8,8 +8,8 @@ from intent_router.normalizer import normalize
 _ALFABETO = st.sampled_from(
     list("abcdefghijklmnopqrstuvwxyzñÑ0123456789 \t\n.,;:¿?¡!")
     + ["á", "é", "í", "ó", "ú", "Á", "É", "Í", "Ó", "Ú", "ü", "Ü"]
-    + ["́", "̃", "̈"]
-    + ["\x00", "\x1f", "﻿"]
+    + ["\u0301", "\u0303", "\u0308"]
+    + ["\x00", "\x1f", "\ufeff"]
 )
 
 _MAX_SIZE_TEXTOS = 200

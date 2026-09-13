@@ -42,4 +42,4 @@ def test_caso_9_longitud_maxima_no_positiva_lanza_valueerror():
 
 
 def test_caso_10_ene_en_forma_nfd_sobrevive():
-    assert normalize("N" + "̃") == "ñ"
+    assert normalize("N" + "\u0303") == "ñ"

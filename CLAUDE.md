@@ -14,15 +14,13 @@ Construyendo `intent_router/` como paquete standalone: la cascada de 3 niveles (
 
 ## Comentarios
 
-Esta sección aplica a código de producción (`src/`). En tests el criterio es otro: ver más abajo.
-
 - Cero comentarios inline dentro del cuerpo de una función, sin excepción. Si hace falta explicar el *porqué* de algo no obvio, se extrae a una función privada con nombre descriptivo — el nombre reemplaza al comentario.
 - Docstrings de una sola línea. Si necesitás más de una línea para explicar qué hace una función, la función está haciendo demasiado: dividirla, no documentarla.
 - Docstring de módulo: opcional, máximo una línea.
 
-### Comentarios en tests
+## Caracteres no imprimibles
 
-En un test, el "por qué existe este caso" es contexto que no se puede mover a un nombre de función. Se permite un comentario breve cuando explica por qué el caso existe (no qué hace la línea).
+Nunca escribir un carácter invisible o no imprimible como literal en el código fuente: combinantes Unicode, BOM, control chars, sentinels de zona de uso privado. Siempre secuencia de escape (`"\u0303"`, `"\ufeff"`, `"\x00"`). Un carácter que no se ve al leer el archivo es un bug esperando a que un editor, un copy/paste o una normalización del repo se lo coma sin dejar rastro.
 
 ## Módulos a construir (contrato)
 
@@ -77,7 +75,7 @@ Nombres de módulo/carpeta ya definidos en la doc técnica del proyecto — no s
 
 ## Casos de aceptación — `normalize()`
 
-Contrato fijo. No cambiar una entrada porque otra parezca mejor, no agregar casos acá.
+Contrato fijo. Claude Code no agrega ni cambia casos acá sin pedirlo primero. Un bug encontrado en `normalize()` siempre se congela como caso nuevo en esta lista.
 
 ```
 normalize("año")           == "año"
@@ -87,6 +85,7 @@ normalize("camión")        == "camion"
 normalize("")              == ""
 normalize("a" * 5000)      -> longitud 2000
 normalize("hola\x00mundo") == "holamundo"
+normalize("N" + "\u0303")  == "ñ"   (ñ en forma NFD: N + tilde combinante)
 
 normalize(123)                        -> TypeError
 normalize("hola", longitud_maxima=0)  -> ValueError
