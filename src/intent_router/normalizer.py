@@ -7,7 +7,10 @@ stemming ni parsing sintactico: eso es responsabilidad de otras capas.
 
 import unicodedata
 
-_ENIE_PLACEHOLDER = ""
+_ENIE_PLACEHOLDER = chr(0xE000)
+
+assert _ENIE_PLACEHOLDER != ""
+assert unicodedata.category(_ENIE_PLACEHOLDER) == "Co"
 
 _CONTROL_CATEGORIES = {"Cc", "Cf"}
 
