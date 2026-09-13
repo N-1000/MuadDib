@@ -1,9 +1,4 @@
-"""Normalizacion de texto de entrada para el router.
-
-Quita diacriticos (acentos) preservando la ene con tilde, porque en
-espanol "ano" y "año" son palabras distintas. No hace tokenizacion,
-stemming ni parsing sintactico: eso es responsabilidad de otras capas.
-"""
+"""Normalizacion de texto de entrada para el router: minusculas, sin diacriticos salvo la ñ."""
 
 import unicodedata
 
@@ -16,11 +11,7 @@ _CONTROL_CATEGORIES = {"Cc", "Cf"}
 
 
 def normalize(texto: str, *, longitud_maxima: int = 2000) -> str:
-    """Normaliza texto de usuario: minusculas, sin diacriticos (menos la ñ),
-    sin caracteres de control, truncado a longitud_maxima.
-
-    Es una funcion pura: misma entrada, misma salida, sin efectos secundarios.
-    """
+    """Normaliza texto de usuario: minusculas, sin diacriticos salvo la ñ, sin caracteres de control, truncado a longitud_maxima."""
     if not isinstance(texto, str):
         raise TypeError("texto debe ser str")
     if longitud_maxima <= 0:
