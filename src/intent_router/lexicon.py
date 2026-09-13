@@ -1,19 +1,4 @@
-"""Listas cerradas de palabras para la capa determinista del router.
-
-Verbos de accion, conectores y negaciones del espanol (incluye registro
-caleño coloquial). Pertenencia en O(1) via frozenset, sin dependencias
-externas. Son un punto de partida: hay que ajustarlas con mensajes reales
-de usuarios cuando exista un dataset (ver CLAUDE.md, capa deterministica).
-
-Todas las entradas estan en la misma forma que produce
-`intent_router.normalizer.normalize`: minusculas, sin acentos (la ñ se
-preserva), una sola palabra por entrada. Las variantes conjugadas de cada
-verbo (voseo caleño, imperativo, etc.) son responsabilidad del siguiente
-paso de la cascada, no de esta lista.
-
-NOTA: nombre de archivo provisional, no esta fijado en la tabla de
-modulos del CLAUDE.md.
-"""
+"""Tres listas cerradas (verbos-accion, conectores, negaciones), en la misma forma que produce `normalize`."""
 
 VERBOS_ACCION: frozenset[str] = frozenset(
     {
