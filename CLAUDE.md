@@ -14,9 +14,15 @@ Construyendo `intent_router/` como paquete standalone: la cascada de 3 niveles (
 
 ## Comentarios
 
+Esta sección aplica a código de producción (`src/`). En tests el criterio es otro: ver más abajo.
+
 - Cero comentarios inline dentro del cuerpo de una función, sin excepción. Si hace falta explicar el *porqué* de algo no obvio, se extrae a una función privada con nombre descriptivo — el nombre reemplaza al comentario.
 - Docstrings de una sola línea. Si necesitás más de una línea para explicar qué hace una función, la función está haciendo demasiado: dividirla, no documentarla.
 - Docstring de módulo: opcional, máximo una línea.
+
+### Comentarios en tests
+
+En un test, el "por qué existe este caso" es contexto que no se puede mover a un nombre de función. Se permite un comentario breve cuando explica por qué el caso existe (no qué hace la línea).
 
 ## Módulos a construir (contrato)
 
