@@ -1,0 +1,31 @@
+from intent_router.lexicon import VERBOS_ACCION
+from intent_router.typo_fallback import corregir_typo
+
+
+def test_token_exacto_se_devuelve_sin_tocar():
+    assert corregir_typo("mostrar", VERBOS_ACCION) == "mostrar"
+
+
+def test_typo_de_una_letra_se_corrige():
+    assert corregir_typo("mostar", VERBOS_ACCION) == "mostrar"
+
+
+def test_typo_de_letra_repetida_se_corrige():
+    assert corregir_typo("cancelaar", VERBOS_ACCION) == "cancelar"
+    assert corregir_typo("activarr", VERBOS_ACCION) == "activar"
+
+
+def test_palabra_no_relacionada_no_se_corrige():
+    assert corregir_typo("xyz", VERBOS_ACCION) is None
+    assert corregir_typo("perro", VERBOS_ACCION) is None
+
+
+def test_umbral_personalizado_es_mas_permisivo():
+    # "notificarrrrrr" tiene ratio ~78 contra "notificar": con umbral
+    # default (90) no corrige, con un umbral mas bajo explicito si.
+    assert corregir_typo("notificarrrrrr", VERBOS_ACCION) is None
+    assert corregir_typo("notificarrrrrr", VERBOS_ACCION, umbral=70) == "notificar"
+
+
+def test_vocabulario_vacio_no_rompe():
+    assert corregir_typo("mostar", frozenset()) is None
