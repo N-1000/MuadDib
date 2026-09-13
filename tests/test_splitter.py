@@ -13,9 +13,21 @@ def test_un_conector_divide_en_dos():
     ]
 
 
-def test_varios_conectores_dividen_en_varias_clausulas():
+def test_dos_conectores_distintos_dividen_en_dos_clausulas():
     resultado = dividir_por_conectores("dame el reporte pero tambien activa la alerta")
     assert resultado == ["dame el reporte", "activa la alerta"]
+
+
+def test_tres_conectores_dividen_en_cuatro_clausulas():
+    resultado = dividir_por_conectores(
+        "dame el reporte y activa la alerta pero revisa el sensor tambien manda el resumen"
+    )
+    assert resultado == [
+        "dame el reporte",
+        "activa la alerta",
+        "revisa el sensor",
+        "manda el resumen",
+    ]
 
 
 def test_conector_al_borde_no_deja_clausula_vacia():

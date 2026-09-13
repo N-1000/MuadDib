@@ -1,3 +1,4 @@
+import inspect
 import unicodedata
 
 from hypothesis import given, settings, strategies as st
@@ -11,7 +12,12 @@ _ALFABETO = st.sampled_from(
     + ["\x00", "\x1f", "﻿"]
 )
 
-_TEXTOS = st.text(alphabet=_ALFABETO, max_size=200)
+_MAX_SIZE_TEXTOS = 200
+_TEXTOS = st.text(alphabet=_ALFABETO, max_size=_MAX_SIZE_TEXTOS)
+
+_LONGITUD_MAXIMA_DEFECTO = inspect.signature(normalize).parameters["longitud_maxima"].default
+
+assert _MAX_SIZE_TEXTOS < _LONGITUD_MAXIMA_DEFECTO, "_TEXTOS no debe poder truncarse: rompe el supuesto de la propiedad 3"
 
 
 @settings(max_examples=1000)

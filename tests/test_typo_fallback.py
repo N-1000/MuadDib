@@ -20,11 +20,12 @@ def test_palabra_no_relacionada_no_se_corrige():
     assert corregir_typo("perro", VERBOS_ACCION) is None
 
 
-def test_umbral_personalizado_es_mas_permisivo():
-    # "notificarrrrrr" tiene ratio ~78 contra "notificar": con umbral
-    # default (90) no corrige, con un umbral mas bajo explicito si.
-    assert corregir_typo("notificarrrrrr", VERBOS_ACCION) is None
-    assert corregir_typo("notificarrrrrr", VERBOS_ACCION, umbral=70) == "notificar"
+def test_umbral_bajo_corrige_lo_que_el_default_rechaza():
+    # No depende del score exacto de rapidfuzz: umbral=0 acepta cualquier
+    # mejor candidato, sea cual sea su ratio.
+    token = "notificarrrrrr"
+    assert corregir_typo(token, VERBOS_ACCION) is None
+    assert corregir_typo(token, VERBOS_ACCION, umbral=0) == "notificar"
 
 
 def test_vocabulario_vacio_no_rompe():
