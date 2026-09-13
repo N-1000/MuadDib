@@ -26,12 +26,10 @@ def normalize(texto: str, *, longitud_maxima: int = 2000) -> str:
     if longitud_maxima <= 0:
         raise ValueError("longitud_maxima debe ser positiva")
 
+    texto = unicodedata.normalize("NFC", texto)
     texto = texto[:longitud_maxima]
     texto = texto.lower()
 
-    # Si el texto trae el caracter usado como marcador interno (raro, pero
-    # posible como intento de manipular la normalizacion), se descarta antes
-    # de usarlo como sentinel para no confundirlo con una ñ real.
     texto = texto.replace(_ENIE_PLACEHOLDER, "")
     texto = texto.replace("ñ", _ENIE_PLACEHOLDER)
 

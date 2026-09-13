@@ -14,9 +14,9 @@ Construyendo `intent_router/` como paquete standalone: la cascada de 3 niveles (
 
 ## Comentarios
 
-- Comentar el *porqué* de una decisión no obvia (ej: por qué NFD y no NFC, por qué ese umbral y no otro), nunca *qué* hace la línea.
-- No comentar cada paso. Un comentario por línea o por bloque corto interrumpe la lectura lineal al inspeccionar o debuggear — el comentario es la excepción, no el acompañamiento constante del código.
-- Si una función necesita comentarios para explicarse paso a paso, el problema es la función, no la falta de comentarios: dividirla en piezas más chicas y nombradas es mejor que documentar la complejidad in situ.
+- Cero comentarios inline dentro del cuerpo de una función, sin excepción. Si hace falta explicar el *porqué* de algo no obvio, se extrae a una función privada con nombre descriptivo — el nombre reemplaza al comentario.
+- Docstrings de una sola línea. Si necesitás más de una línea para explicar qué hace una función, la función está haciendo demasiado: dividirla, no documentarla.
+- Docstring de módulo: opcional, máximo una línea.
 
 ## Módulos a construir (contrato)
 
@@ -62,8 +62,31 @@ Nombres de módulo/carpeta ya definidos en la doc técnica del proyecto — no s
 
 ## Tests
 
+- Correr la suite: `uv run pytest`
 - `normalize()` y `extract_entities()` son funciones puras: cobertura alta, casos borde (tildes, emojis, cadena vacía, mensajes larguísimos).
-- Comando para correr la suite: `[completar — no está decidido todavía]`
+- Property-based con `hypothesis` sobre las funciones puras. Invariantes de `normalize()`: idempotencia, `len(salida) <= longitud_maxima`, ningún carácter de categoría Unicode `Mn` en la salida y la ñ sobrevive.
+- **Si un test falla, se arregla la función, no el test.** No agregar `assume()` ni relajar una aserción para que pase. Si creés que un caso de aceptación está mal, pedí autorización antes de cambiarlo.
+- Si `hypothesis` encuentra un contraejemplo, reportarlo con el input exacto antes de modificar test o función.
+- No dar una tarea por terminada con tests en rojo.
+
+## Casos de aceptación — `normalize()`
+
+Contrato fijo. No cambiar una entrada porque otra parezca mejor, no agregar casos acá.
+
+```
+normalize("año")           == "año"
+normalize("AÑO")           == "año"
+normalize("ano")           == "ano"
+normalize("camión")        == "camion"
+normalize("")              == ""
+normalize("a" * 5000)      -> longitud 2000
+normalize("hola\x00mundo") == "holamundo"
+
+normalize(123)                        -> TypeError
+normalize("hola", longitud_maxima=0)  -> ValueError
+```
+
+El sentinel usado para proteger la ñ debe ser un codepoint de zona de uso privado (categoría Unicode `Co`), nunca vacío. Assert a nivel de módulo que lo verifique al importar.
 
 ## Qué NO entra acá (deliberado, no un olvido)
 
