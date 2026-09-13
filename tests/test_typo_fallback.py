@@ -29,3 +29,17 @@ def test_umbral_personalizado_es_mas_permisivo():
 
 def test_vocabulario_vacio_no_rompe():
     assert corregir_typo("mostar", frozenset()) is None
+
+
+def test_candidatos_ambiguos_devuelve_none():
+    # "confirurar": configurar=90.0, confirmar=84.2, gap=5.8 < margen default (10).
+    assert corregir_typo("confirurar", VERBOS_ACCION) is None
+
+
+def test_ganador_claro_corrige_pese_a_segundo_candidato():
+    # "mostar": mostrar=92.3, consultar=66.7, gap=25.6 >= margen default (10).
+    assert corregir_typo("mostar", VERBOS_ACCION) == "mostrar"
+
+
+def test_margen_ambiguedad_personalizado_es_mas_permisivo():
+    assert corregir_typo("confirurar", VERBOS_ACCION, margen_ambiguedad=3) == "configurar"
