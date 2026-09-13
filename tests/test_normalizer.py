@@ -1,6 +1,6 @@
 import pytest
 
-from intent_router.normalizer import normalize
+from intent_router.normalizer import _ENIE_PLACEHOLDER, normalize
 
 
 def test_preserva_ene_con_tilde():
@@ -43,8 +43,7 @@ def test_trunca_a_longitud_maxima():
 
 
 def test_intento_de_inyectar_marcador_interno():
-    caracter_marcador_interno = ""
-    resultado = normalize(f"hola{caracter_marcador_interno}mundo")
+    resultado = normalize(f"hola{_ENIE_PLACEHOLDER}mundo")
     assert "ñ" not in resultado
     assert resultado == "holamundo"
 
