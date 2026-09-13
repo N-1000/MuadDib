@@ -39,3 +39,7 @@ def test_caso_8_tipo_no_str_lanza_typeerror():
 def test_caso_9_longitud_maxima_no_positiva_lanza_valueerror():
     with pytest.raises(ValueError):
         normalize("hola", longitud_maxima=0)
+
+
+def test_caso_10_ene_en_forma_nfd_sobrevive():
+    assert normalize("N" + "̃") == "ñ"
