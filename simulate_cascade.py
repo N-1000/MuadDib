@@ -2,12 +2,18 @@ import json
 from pathlib import Path
 import yaml
 from eval_corpus_baseline import CORPUS_67, CANONICAL_PATH, OUTPUT_JSON as BASELINE_JSON
+from intent_router.rules import analizar
 
 
 def cargar_sensitive_intents(ruta: Path) -> set[str]:
     with open(ruta, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return {item["name"] for item in data.get("intents", []) if item.get("sensitive", False)}
+
+
+def tiene_clausula_negada(mensaje: str) -> bool:
+    analisis = analizar(mensaje)
+    return any(c.negada for c in analisis.clausulas)
 
 
 def simular_cascada(umbral_theta=0.60, margen_min=0.05):
@@ -48,7 +54,7 @@ def simular_cascada(umbral_theta=0.60, margen_min=0.05):
             continue
 
         # 2. Paso por Nivel 1 (Embeddings)
-        # Condiciones de fallo/escalada de N1:
+        # Condiciones de fallo/escalada de N1 (independientes, igual que router.py):
         # a) Intencion sensible: N1 no puede resolverla
         es_sensible = top1 in sensitive_intents
 
@@ -58,7 +64,20 @@ def simular_cascada(umbral_theta=0.60, margen_min=0.05):
         # c) Ambiguedad
         ambiguo = delta < margen_min
 
+        # d) Clausula negada: N1 no puede resolverla, igual que sensitive
+        negada = tiene_clausula_negada(msg)
+
+        razones_activas = []
         if es_sensible:
+            razones_activas.append("Bloqueo fail-safe: intencion sensitive=true en Nivel 1")
+        if confianza_baja:
+            razones_activas.append(f"Confianza baja (s1={s1:.4f} < theta={umbral_theta:.2f})")
+        if ambiguo:
+            razones_activas.append(f"Margen ambiguo (delta={delta:+.4f} < margen_min={margen_min:.2f})")
+        if negada:
+            razones_activas.append("Clausula negada: bloqueo fail-safe en Nivel 1")
+
+        if razones_activas:
             escalados_a_n2.append({
                 "mensaje": msg,
                 "bloque": bloque,
@@ -66,27 +85,7 @@ def simular_cascada(umbral_theta=0.60, margen_min=0.05):
                 "candidato_n1": top1,
                 "s1": s1,
                 "delta": delta,
-                "razon": "Bloqueo fail-safe: intencion sensitive=true en Nivel 1",
-            })
-        elif confianza_baja:
-            escalados_a_n2.append({
-                "mensaje": msg,
-                "bloque": bloque,
-                "esperado": esperado,
-                "candidato_n1": top1,
-                "s1": s1,
-                "delta": delta,
-                "razon": f"Confianza baja (s1={s1:.4f} < theta={umbral_theta:.2f})",
-            })
-        elif ambiguo:
-            escalados_a_n2.append({
-                "mensaje": msg,
-                "bloque": bloque,
-                "esperado": esperado,
-                "candidato_n1": top1,
-                "s1": s1,
-                "delta": delta,
-                "razon": f"Margen ambiguo (delta={delta:+.4f} < margen_min={margen_min:.2f})",
+                "razones": razones_activas,
             })
         else:
             # Resuelto por Nivel 1
@@ -121,14 +120,16 @@ def simular_cascada(umbral_theta=0.60, margen_min=0.05):
     print(f"\n3. ESCALADOS A NIVEL 2 (LLM): {len(escalados_a_n2)}/{total} ({len(escalados_a_n2)/total*100:.1f}%)")
     razones = {}
     for r in escalados_a_n2:
-        r_tipo = r["razon"].split("(")[0].strip()
-        razones[r_tipo] = razones.get(r_tipo, 0) + 1
+        for razon in r["razones"]:
+            r_tipo = razon.split("(")[0].strip()
+            razones[r_tipo] = razones.get(r_tipo, 0) + 1
     for razon, cnt in razones.items():
         print(f"   - {razon}: {cnt} casos")
 
     print("\nDetalle de mensajes escalados a Nivel 2:")
     for r in escalados_a_n2:
-        print(f"   * '{r['mensaje']}' -> Motivo: {r['razon']} (Candidato: {r['candidato_n1']})")
+        motivo = " + ".join(r["razones"])
+        print(f"   * '{r['mensaje']}' -> Motivo: {motivo} (Candidato: {r['candidato_n1']})")
 
     ahorro_total = (len(resueltos_n0) + len(resueltos_n1)) / total * 100
     print("\n" + "=" * 95)
