@@ -3,10 +3,9 @@ import sys
 from pathlib import Path
 import numpy as np
 import yaml
-from sentence_transformers import SentenceTransformer
+from intent_router.embeddings import load_model, MODEL_DEFAULT as MODEL_NAME
 from intent_router.normalizer import normalize
 
-MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 CANONICAL_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "canonical.yaml"
 
 
@@ -128,7 +127,7 @@ def main():
     print(f"Intenciones: {len(intents)}, Frases: {total_frases}")
 
     print(f"Cargando modelo '{MODEL_NAME}'...")
-    model = SentenceTransformer(MODEL_NAME)
+    model = load_model(MODEL_NAME)
 
     _, colisiones = evaluar_leave_one_out(intents, model)
     if args.strict and colisiones > 0:

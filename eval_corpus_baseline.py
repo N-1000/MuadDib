@@ -2,10 +2,8 @@ import json
 from pathlib import Path
 import numpy as np
 import yaml
-from sentence_transformers import SentenceTransformer
+from intent_router.embeddings import load_model, MODEL_DEFAULT as MODEL_NAME
 from intent_router.normalizer import normalize
-
-MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 CANONICAL_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "canonical.yaml"
 OUTPUT_JSON = Path(__file__).resolve().parent / "baseline_results.json"
 
@@ -246,7 +244,7 @@ def main():
     print(f"Cargando canonical desde: {CANONICAL_PATH}")
     canonical = cargar_canonical(CANONICAL_PATH)
     print(f"Cargando modelo de embeddings: {MODEL_NAME}")
-    model = SentenceTransformer(MODEL_NAME)
+    model = load_model(MODEL_NAME)
 
     resultados = evaluar_corpus(CORPUS_67, canonical, model)
     imprimir_reporte(resultados)
