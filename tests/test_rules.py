@@ -37,8 +37,10 @@ def test_negacion_es_por_clausula_no_global():
 def test_prioriza_por_orden_no_por_tipo_de_match():
     # "cancelaar" (typo, requiere fallback) aparece antes que "alerta"
     # (match exacto via variante). Gana el primer token resoluble en la
-    # frase, no el primer match exacto sin importar la posicion.
-    resultado = analizar("Cancelaar la alerta")
+    # frase, no el primer match exacto sin importar la posicion. Sin
+    # determinante antes de "alerta": con "la" en medio, DETERMINANTES ya
+    # la descarta y el caso no prueba nada sobre el orden.
+    resultado = analizar("Cancelaar alerta")
     assert resultado.clausulas[0].verbo == "cancelar"
 
 
