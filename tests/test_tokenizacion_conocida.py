@@ -37,3 +37,14 @@ def test_codigo_alfanumerico_sin_puntuacion_no_se_parte():
     assert _tokenizar("revisa el co2 del sensor") == [
         "revisa", "el", "co2", "del", "sensor",
     ]
+
+
+def test_zwj_se_pierde_y_rompe_el_emoji_compuesto():
+    # normalize() saca U+200D (ZERO WIDTH JOINER) porque es categoria Cf,
+    # la misma que se usa para sacar caracteres de control. El emoji de
+    # familia (persona+ZWJ+persona+ZWJ+persona) entra como 5 codepoints
+    # y sale como 3 emojis sueltos, sin el joiner que los componia.
+    familia = "\U0001F468‍\U0001F469‍\U0001F467"
+    resultado = normalize(familia)
+    assert resultado == "\U0001F468\U0001F469\U0001F467"
+    assert len(resultado) == 3
