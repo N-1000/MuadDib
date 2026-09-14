@@ -15,12 +15,20 @@
 # Cristales (ya cubiertos por "occidente"), asi que se agrego ahi. Si
 # el backend real lo modela distinto, corregir aca.
 #
-# Pendiente, fuera de este barrido: "melendez" y "chipichape" aparecen en
-# canonical.yaml/frases.txt como nombres de sensor/estacion, no de region,
-# y no hay tipo de entidad "sensor" en este catalogo. Ningun intent
-# declara hoy cardinalidad sobre ese tipo, asi que no afecta la compuerta
-# ni la medicion de simulate_cascade.py -- pero es el mismo patron de
-# catalogo incompleto, en otro tipo de entidad.
+# Pendiente, fuera de este barrido, y esto NO es deuda de catalogo: no
+# falta un dato, falta el tipo. "melendez" y "chipichape" aparecen en
+# canonical.yaml/frases.txt como nombres de sensor/estacion, nombrados en
+# phrases de consultar_estado_sensor y localizar_sensor, pero no existe
+# un tipo de entidad "sensor" en este archivo. Esos intents pueden
+# clasificar bien en Nivel 0/1 y despachar de todos modos sin el
+# parametro que su accion necesita: get_sensor_health sin node_id,
+# locate_sensor sin destino. Es la misma clase de hueco que compare_zones
+# tenia antes de que existiera la compuerta de cardinalidad -- ahi no
+# fallaba porque nadie media, y esto no falla hoy porque ningun intent
+# declara cardinalidad sobre un tipo que ni siquiera existe todavia.
+# Arreglo pendiente: agregar el tipo "sensor" al catalogo y declarar
+# entity/entity_cardinality en esos dos intents para que la compuerta
+# los alcance.
 
 client: ecopulse
 
