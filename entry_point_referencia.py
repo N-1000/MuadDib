@@ -56,7 +56,10 @@ def main() -> None:
     for mensaje in mensajes:
         resultado = motor.procesar_mensaje(mensaje)
         for d in resultado.decisiones:
-            print(f"'{d.clausula}' -> nivel={d.nivel} intencion={d.intencion} accion={d.accion}")
+            print(
+                f"'{d.clausula}' -> nivel={d.nivel} intencion={d.intencion} "
+                f"candidato_descartado={d.candidato_descartado} accion={d.accion}"
+            )
 
 
 if __name__ == "__main__":

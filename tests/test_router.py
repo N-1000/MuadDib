@@ -119,7 +119,8 @@ def test_compuerta_sensitive_true_en_nivel1_escala_siempre(monkeypatch):
 
     d = _evaluar_nivel1("activa la alerta", False, can, umbral=0.60, margen_min=0.05, config={})
     assert d.nivel == 2
-    assert d.intencion == "activar_alerta"
+    assert d.intencion is None
+    assert d.candidato_descartado == "activar_alerta"
     assert d.sensitive is True
     assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
 
@@ -289,7 +290,8 @@ def test_clausula_negada_bloqueada_en_nivel0():
     assert len(res.decisiones) == 1
     d = res.decisiones[0]
     assert d.nivel == 2
-    assert d.intencion == "consultar_plan_pance"
+    assert d.intencion is None
+    assert d.candidato_descartado == "consultar_plan_pance"
     assert d.negada is True
     assert d.accion == ("escalate_to_llm",)
     assert "clausula_negada_en_nivel0" in d.motivos_escalada
@@ -331,7 +333,8 @@ def test_multi_intencion_heterogenea_nivel0_y_escalada_sensitive(monkeypatch):
 
     # Clausula 2: Escala a Nivel 2 por fail_safe_sensitive
     assert d2.nivel == 2
-    assert d2.intencion == "activar_alerta"
+    assert d2.intencion is None
+    assert d2.candidato_descartado == "activar_alerta"
     assert d2.sensitive is True
     assert "fail_safe_sensitive_en_nivel1" in d2.motivos_escalada
 

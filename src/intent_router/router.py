@@ -23,6 +23,7 @@ class Decision:
     motivos_escalada: tuple[str, ...] = field(default_factory=tuple)
     clausula: str = ""
     entidades: dict[str, Any] = field(default_factory=dict)
+    candidato_descartado: str | None = None
 
 
 @dataclass(frozen=True)
@@ -84,7 +85,7 @@ def _construir_decision_nivel0(
 
     if negada:
         return Decision(
-            intencion=nombre,
+            intencion=None,
             nivel=2,
             confianza=1.0,
             accion=("escalate_to_llm",),
@@ -92,6 +93,7 @@ def _construir_decision_nivel0(
             negada=True,
             motivos_escalada=("clausula_negada_en_nivel0",),
             clausula=texto_clausula,
+            candidato_descartado=nombre,
         )
 
     entidades, cardinalidad_ok = _evaluar_entidades(
@@ -102,7 +104,7 @@ def _construir_decision_nivel0(
     )
     if not cardinalidad_ok:
         return Decision(
-            intencion=nombre,
+            intencion=None,
             nivel=2,
             confianza=1.0,
             accion=("escalate_to_llm",),
@@ -111,6 +113,7 @@ def _construir_decision_nivel0(
             motivos_escalada=("cardinalidad_entidad_insuficiente_en_nivel0",),
             clausula=texto_clausula,
             entidades=entidades,
+            candidato_descartado=nombre,
         )
 
     return Decision(
@@ -188,7 +191,7 @@ def _evaluar_nivel1(
 
     if motivos:
         return Decision(
-            intencion=top1_name,
+            intencion=None,
             nivel=2,
             confianza=s1,
             accion=("escalate_to_llm",),
@@ -197,6 +200,7 @@ def _evaluar_nivel1(
             motivos_escalada=tuple(motivos),
             clausula=texto_clausula,
             entidades=entidades,
+            candidato_descartado=top1_name,
         )
 
     return Decision(

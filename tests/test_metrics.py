@@ -62,6 +62,25 @@ def test_log_decision_emite_registro_estructurado(caplog):
     registro = caplog.records[0]
     assert registro.nivel == 1
     assert registro.intencion == "consultar_pronostico"
+    assert registro.candidato_descartado is None
     assert registro.confianza == 0.9
     assert registro.entidades == {"region": "pance"}
     assert registro.latencia_ms == 42.5
+
+
+def test_log_decision_registra_candidato_descartado_en_escalada(caplog):
+    decision_escalada = Decision(
+        intencion=None,
+        nivel=2,
+        confianza=0.85,
+        accion=("escalate_to_llm",),
+        sensitive=True,
+        motivos_escalada=("fail_safe_sensitive_en_nivel1",),
+        candidato_descartado="activar_alerta",
+    )
+    with caplog.at_level(logging.INFO, logger="intent_router.metrics"):
+        log_decision(EventoDecision(decision=decision_escalada, latencia_ms=10.0))
+
+    registro = caplog.records[0]
+    assert registro.intencion is None
+    assert registro.candidato_descartado == "activar_alerta"

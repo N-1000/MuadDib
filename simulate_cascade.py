@@ -127,7 +127,7 @@ def imprimir_reporte(filas: list[dict], config: dict, canonical_data) -> None:
     for f in n2:
         d = f["decision"]
         motivo = " + ".join(d.motivos_escalada) if d.motivos_escalada else "-"
-        print(f"   * '{d.clausula}' -> Candidato: {d.intencion} | Motivo: {motivo}")
+        print(f"   * '{d.clausula}' -> Candidato: {d.candidato_descartado} | Motivo: {motivo}")
 
     ahorro_total = (len(n0) + len(n1)) / total_clausulas * 100
     print("\n" + "=" * 95)

@@ -33,6 +33,7 @@ def log_decision(evento: EventoDecision) -> None:
         extra={
             "nivel": d.nivel,
             "intencion": d.intencion,
+            "candidato_descartado": d.candidato_descartado,
             "confianza": d.confianza,
             "entidades": d.entidades,
             "latencia_ms": evento.latencia_ms,
