@@ -177,6 +177,29 @@ def test_resolucion_nivel0_exact_match():
     assert d.accion == ("reply_greeting",)
 
 
+def test_clausula_negada_bloqueada_en_nivel0():
+    """'no quiero ir a pance' matchea la phrase 'pance' por keyword; no debe despachar la accion."""
+    config = {
+        "intents": [
+            {
+                "name": "consultar_plan_pance",
+                "phrases": ["pance"],
+                "action": ["show_quality_air"],
+                "sensitive": False,
+            }
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
+    }
+    res = resolve("no quiero ir a pance", config)
+    assert len(res.decisiones) == 1
+    d = res.decisiones[0]
+    assert d.nivel == 2
+    assert d.intencion == "consultar_plan_pance"
+    assert d.negada is True
+    assert d.accion == ("escalate_to_llm",)
+    assert "clausula_negada_en_nivel0" in d.motivos_escalada
+
+
 def test_multi_intencion_heterogenea_nivel0_y_escalada_sensitive(monkeypatch):
     config = {
         "intents": [

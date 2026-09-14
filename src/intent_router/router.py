@@ -45,47 +45,54 @@ def _evaluar_nivel0(
     intents = config_nivel0.get("intents", [])
 
     for intent in intents:
-        nombre = intent["name"]
-        modo_match = intent.get("match", "any")
-        phrases = [normalize(p) for p in intent.get("phrases", [])]
-        sensitive = bool(intent.get("sensitive", False))
-        accion = tuple(intent.get("action", []))
-
-        if modo_match == "exact":
-            if texto_norm in phrases:
-                return Decision(
-                    intencion=nombre,
-                    nivel=0,
-                    confianza=1.0,
-                    accion=accion,
-                    sensitive=sensitive,
-                    negada=negada,
-                    clausula=texto_clausula,
-                )
-        elif modo_match == "all":
-            if phrases and all(p in texto_norm for p in phrases):
-                return Decision(
-                    intencion=nombre,
-                    nivel=0,
-                    confianza=1.0,
-                    accion=accion,
-                    sensitive=sensitive,
-                    negada=negada,
-                    clausula=texto_clausula,
-                )
-        else:
-            if any(p in texto_norm for p in phrases):
-                return Decision(
-                    intencion=nombre,
-                    nivel=0,
-                    confianza=1.0,
-                    accion=accion,
-                    sensitive=sensitive,
-                    negada=negada,
-                    clausula=texto_clausula,
-                )
+        if _matchea_intent_nivel0(intent, texto_norm):
+            return _construir_decision_nivel0(intent, negada, texto_clausula)
 
     return None
+
+
+def _matchea_intent_nivel0(intent: dict[str, Any], texto_norm: str) -> bool:
+    """Evalua si texto_norm cumple el modo de match declarado por el intent."""
+    modo_match = intent.get("match", "any")
+    phrases = [normalize(p) for p in intent.get("phrases", [])]
+
+    if modo_match == "exact":
+        return texto_norm in phrases
+    if modo_match == "all":
+        return bool(phrases) and all(p in texto_norm for p in phrases)
+    return any(p in texto_norm for p in phrases)
+
+
+def _construir_decision_nivel0(
+    intent: dict[str, Any],
+    negada: bool,
+    texto_clausula: str,
+) -> Decision:
+    """Construye la Decision de Nivel 0; escala a Nivel 2 si la clausula viene negada."""
+    nombre = intent["name"]
+    sensitive = bool(intent.get("sensitive", False))
+
+    if negada:
+        return Decision(
+            intencion=nombre,
+            nivel=2,
+            confianza=1.0,
+            accion=("escalate_to_llm",),
+            sensitive=sensitive,
+            negada=True,
+            motivos_escalada=("clausula_negada_en_nivel0",),
+            clausula=texto_clausula,
+        )
+
+    return Decision(
+        intencion=nombre,
+        nivel=0,
+        confianza=1.0,
+        accion=tuple(intent.get("action", [])),
+        sensitive=sensitive,
+        negada=False,
+        clausula=texto_clausula,
+    )
 
 
 def _evaluar_nivel1(
