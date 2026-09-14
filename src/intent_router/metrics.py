@@ -16,6 +16,12 @@ class EventoDecision:
     latencia_ms: float
 
 
+# Acumula desde el arranque del proceso, sin ventana ni descarte: hit_rate() es un promedio de toda
+# la vida del proceso, no puede ver una tendencia reciente. Con diez mil eventos acumulados, cien
+# escaladas seguidas mueven el promedio casi nada -- por eso una alerta de degradacion sobre este
+# acumulador tal como esta no detecta nada. Antes de usar esto para alertar hace falta una ventana
+# deslizante (ultimos N eventos o ultimos N minutos); no se construyo porque todavia no hay caller
+# en produccion que la necesite.
 _eventos: list[EventoDecision] = []
 
 
