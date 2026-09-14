@@ -7,6 +7,24 @@
 #   - los UIAction(type=...)   -> action
 #   - las regiones/nodos de NodeDataService -> entity_catalog + entity
 #
+# Nivel 0 exige match exacto de la clausula completa contra una phrase
+# (router.py _matchea_intent_nivel0). Las phrases de abajo eran keywords
+# pensadas para matchear por substring dentro de un mensaje mas largo, no
+# mensajes completos -- medido contra el corpus real (simulate_cascade.py),
+# ese modo resolvia mal 3 de 4 casos no-saludo por keyword-hijack ("donde"
+# en "Donde esta el sensor mas cercano" disparaba navegar_mapa en vez de
+# dejar que Nivel 1 resolviera localizar_sensor). Bajo match exacto la
+# mayoria de estas reglas casi nunca van a disparar contra una oracion
+# completa: es intencional, no un defecto. El trabajo semantico real lo
+# hace Nivel 1 (canonical.yaml); esta tabla dejo de ser un clasificador
+# por keyword y quedo como atajo para frases cortas y completas.
+#
+# consultar_comunas_limpias se elimino: su diseño original exigia las dos
+# keywords juntas (match: all, "comunas" AND "limpio"), algo sin
+# traduccion honesta a match exacto de frase completa -- dejarla con una
+# sola keyword habria creado un disparo que el diseño original nunca
+# quiso.
+#
 # El orden de la lista `intents` preserva el orden original de las ramas
 # if/elif: si un mensaje matchea mas de una, gana la primera de la lista,
 # igual que en el codigo original (evaluacion secuencial, no la mas
@@ -14,7 +32,7 @@
 #
 # Ninguna accion de agent_core.py tiene efecto real (todas son
 # navegacion/despliegue de UI de solo lectura), por eso sensitive: false
-# en las 10. El campo esta declarado desde ya por regla de arquitectura,
+# en todas. El campo esta declarado desde ya por regla de arquitectura,
 # aunque hoy no haya ningun caso true.
 
 client: ecopulse
@@ -45,7 +63,6 @@ entity_catalog:
 
 intents:
   - name: saludo_cortesia
-    match: exact
     phrases:
       - "hola"
       - "buenas tardes"
@@ -80,15 +97,6 @@ intents:
       - "correr"
     entity: []
     action: ["navigate", "enable_tool"]
-    sensitive: false
-
-  - name: consultar_comunas_limpias
-    match: all # unico intent que requiere TODAS las phrases (AND), no OR como el resto
-    phrases:
-      - "comunas"
-      - "limpio"
-    entity: ["region"]
-    action: ["show_quality_air"]
     sensitive: false
 
   - name: consultar_plan_pance

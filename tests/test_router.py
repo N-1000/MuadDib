@@ -158,7 +158,6 @@ def test_resolucion_nivel0_exact_match():
         "intents": [
             {
                 "name": "saludo_cortesia",
-                "match": "exact",
                 "phrases": ["hola", "buenas tardes"],
                 "action": ["reply_greeting"],
                 "sensitive": False,
@@ -177,13 +176,32 @@ def test_resolucion_nivel0_exact_match():
     assert d.accion == ("reply_greeting",)
 
 
+def test_nivel0_no_matchea_por_keyword_suelta():
+    """Nivel 0 exige la frase completa; una keyword suelta dentro de un mensaje mas largo no debe matchear."""
+    config = {
+        "intents": [
+            {
+                "name": "navegar_mapa",
+                "phrases": ["mapa"],
+                "action": ["navigate"],
+                "sensitive": False,
+            }
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
+    }
+    res = resolve("mostrame el mapa por favor", config, canonical_data=None)
+    d = res.decisiones[0]
+    assert d.nivel != 0
+    assert d.accion != ("navigate",)
+
+
 def test_clausula_negada_bloqueada_en_nivel0():
-    """'no quiero ir a pance' matchea la phrase 'pance' por keyword; no debe despachar la accion."""
+    """'no quiero ir a pance' matchea exacto; no debe despachar la accion igual."""
     config = {
         "intents": [
             {
                 "name": "consultar_plan_pance",
-                "phrases": ["pance"],
+                "phrases": ["no quiero ir a pance"],
                 "action": ["show_quality_air"],
                 "sensitive": False,
             }
@@ -205,7 +223,7 @@ def test_multi_intencion_heterogenea_nivel0_y_escalada_sensitive(monkeypatch):
         "intents": [
             {
                 "name": "navegar_mapa",
-                "phrases": ["mapa"],
+                "phrases": ["mostrame el mapa"],
                 "action": ["navigate"],
                 "sensitive": False,
             },

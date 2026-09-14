@@ -52,15 +52,9 @@ def _evaluar_nivel0(
 
 
 def _matchea_intent_nivel0(intent: dict[str, Any], texto_norm: str) -> bool:
-    """Evalua si texto_norm cumple el modo de match declarado por el intent."""
-    modo_match = intent.get("match", "any")
+    """Evalua si texto_norm coincide exactamente con alguna phrase declarada."""
     phrases = [normalize(p) for p in intent.get("phrases", [])]
-
-    if modo_match == "exact":
-        return texto_norm in phrases
-    if modo_match == "all":
-        return bool(phrases) and all(p in texto_norm for p in phrases)
-    return any(p in texto_norm for p in phrases)
+    return texto_norm in phrases
 
 
 def _construir_decision_nivel0(
