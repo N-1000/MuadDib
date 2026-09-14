@@ -10,9 +10,6 @@ from intent_router.embeddings import (
 from intent_router.normalizer import normalize
 from intent_router.rules import analizar
 
-DEFAULT_THRESHOLD = 0.60
-DEFAULT_MIN_MARGIN = 0.05
-
 
 @dataclass(frozen=True)
 class Decision:
@@ -176,9 +173,9 @@ def resolve(
     canonical_data: CanonicalEmbeddings | None = None,
 ) -> RoutingResult:
     """Orquesta la cascada de enrutamiento 0 -> 1 -> 2 para cada clausula del mensaje."""
-    routing_cfg = config.get("routing", {})
-    umbral = float(routing_cfg.get("threshold", DEFAULT_THRESHOLD))
-    margen_min = float(routing_cfg.get("min_margin", DEFAULT_MIN_MARGIN))
+    routing_cfg = config["routing"]
+    umbral = float(routing_cfg["threshold"])
+    margen_min = float(routing_cfg["min_margin"])
 
     analisis = analizar(mensaje)
     clausulas = analisis.clausulas if analisis.clausulas else ()

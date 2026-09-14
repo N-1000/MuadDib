@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
+from intent_router.config_loader import cargar_config
 from intent_router.embeddings import CanonicalEmbeddings
 from intent_router.router import (
-    DEFAULT_MIN_MARGIN,
-    DEFAULT_THRESHOLD,
     Decision,
     RoutingResult,
     _evaluar_nivel1,
@@ -164,7 +163,8 @@ def test_resolucion_nivel0_exact_match():
                 "action": ["reply_greeting"],
                 "sensitive": False,
             }
-        ]
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
     }
     res = resolve("Hola", config)
     assert isinstance(res, RoutingResult)
@@ -186,7 +186,8 @@ def test_multi_intencion_heterogenea_nivel0_y_escalada_sensitive(monkeypatch):
                 "action": ["navigate"],
                 "sensitive": False,
             },
-        ]
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
     }
     # Mock canonical con activar_alerta (sensitive: true)
     can, vec = _crear_canonical_mock(
@@ -218,10 +219,46 @@ def test_multi_intencion_heterogenea_nivel0_y_escalada_sensitive(monkeypatch):
 
 
 def test_degradacion_sin_modelo():
-    config = {"intents": []}
+    config = {"intents": [], "routing": {"threshold": 0.60, "min_margin": 0.05}}
     res = resolve("consulta cualquiera", config, canonical_data=None)
     assert len(res.decisiones) == 1
     d = res.decisiones[0]
     assert d.nivel == 2
     assert d.accion == ("escalate_to_llm",)
     assert "modelo_no_disponible" in d.motivos_escalada
+
+
+def test_resolve_usa_threshold_de_config_yaml_no_el_viejo_default(tmp_path, monkeypatch):
+    """Con threshold=0.80 en config.yaml, s1=0.70 debe escalar (con el viejo default 0.60 no escalaba)."""
+    config_path = tmp_path / "config.yaml"
+    rules_path = tmp_path / "rules_nivel0.yaml"
+    config_path.write_text(
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.05\n",
+        encoding="utf-8",
+    )
+    rules_path.write_text(
+        "client: test\nintents:\n"
+        "  - name: intent_no_relacionado\n"
+        "    phrases: [\"zzz_no_matchea_nunca\"]\n"
+        "    action: [\"reply\"]\n"
+        "    sensitive: false\n",
+        encoding="utf-8",
+    )
+    config = cargar_config(config_path, rules_path)
+
+    can, vec = _crear_canonical_mock(
+        ("consultar_aire",), [0.70], (False,), (("show_air",),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    res = resolve("como esta el aire hoy", config, canonical_data=can)
+    d = res.decisiones[0]
+    assert d.nivel == 2
+    assert "confianza_insuficiente" in d.motivos_escalada
+
+
+def test_resolve_revienta_sin_seccion_routing():
+    config = {"intents": []}
+    with pytest.raises(KeyError):
+        resolve("hola", config, canonical_data=None)
