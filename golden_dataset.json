@@ -268,7 +268,7 @@
     ],
     "tiene_conector_esperado": false,
     "tiene_negacion_esperada": true,
-    "gap_conocido": "'mandes' (subjuntivo) no esta en VARIANTES_VERBO; ratio 66.7 contra 'mandar', por debajo del umbral"
+    "gap_conocido": null
   },
   {
     "mensaje": "Nunca me avises los fines de semana",
@@ -278,7 +278,7 @@
     ],
     "tiene_conector_esperado": false,
     "tiene_negacion_esperada": true,
-    "gap_conocido": "'avises' (subjuntivo) no esta en VARIANTES_VERBO; ratio 66.7 contra 'avisar', por debajo del umbral"
+    "gap_conocido": null
   },
   {
     "mensaje": "Dame el reporte y activa la alerta",

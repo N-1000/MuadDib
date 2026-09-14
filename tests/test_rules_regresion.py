@@ -20,7 +20,7 @@ def test_sustantivo_tras_determinante_no_se_toma_como_verbo():
     # de lo pedido, porque el sustantivo "alerta" es tambien variante verbal.
     r = analizar("no me mandes la alerta")
     (clausula,) = r.clausulas
-    assert clausula.verbo is None
+    assert clausula.verbo != "alertar"
     assert clausula.negada is True
 
 

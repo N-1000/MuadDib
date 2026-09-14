@@ -45,6 +45,7 @@ VARIANTES_VERBO: dict[str, str] = {
     # avisar
     "avisa": "avisar",
     "avisame": "avisar",
+    "avises": "avisar",
     # notificar
     "notifica": "notificar",
     "notificame": "notificar",
@@ -62,6 +63,7 @@ VARIANTES_VERBO: dict[str, str] = {
     # mandar
     "manda": "mandar",
     "mandame": "mandar",
+    "mandes": "mandar",
     # compartir
     "comparte": "compartir",
     "comparti": "compartir",

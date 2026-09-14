@@ -6,9 +6,9 @@ _CATEGORIAS_PROHIBIDAS = {"Mn", "Cf", "Co"}
 _RAIZ = Path(__file__).resolve().parent.parent
 
 
-def _archivos_python_trackeados() -> list[Path]:
+def _archivos_trackeados() -> list[Path]:
     resultado = subprocess.run(
-        ["git", "ls-files", "*.py"],
+        ["git", "ls-files", "*.py", "*.yaml", "*.yml", "*.txt", "*.md"],
         cwd=_RAIZ,
         capture_output=True,
         text=True,
@@ -33,7 +33,7 @@ def test_sin_caracteres_invisibles_literales_en_el_repo():
     # imprimibles.
     hallazgos = {
         str(ruta.relative_to(_RAIZ)): prohibidos
-        for ruta in _archivos_python_trackeados()
-        if (prohibidos := _caracteres_prohibidos(ruta))
+        for ruta in _archivos_trackeados()
+        if ruta.exists() and (prohibidos := _caracteres_prohibidos(ruta))
     }
     assert not hallazgos, f"caracteres Mn/Cf/Co literales encontrados: {hallazgos}"
