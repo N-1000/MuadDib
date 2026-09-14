@@ -44,7 +44,8 @@ def test_zwj_se_pierde_y_rompe_el_emoji_compuesto():
     # la misma que se usa para sacar caracteres de control. El emoji de
     # familia (persona+ZWJ+persona+ZWJ+persona) entra como 5 codepoints
     # y sale como 3 emojis sueltos, sin el joiner que los componia.
-    familia = "\U0001F468‍\U0001F469‍\U0001F467"
+    familia = "\U0001F468\u200d\U0001F469\u200d\U0001F467"
+    assert len(familia) == 5
     resultado = normalize(familia)
     assert resultado == "\U0001F468\U0001F469\U0001F467"
     assert len(resultado) == 3
