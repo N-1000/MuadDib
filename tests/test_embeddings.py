@@ -74,15 +74,41 @@ def test_precompute_canonical_y_ranking(modelo_cargado):
     ranking = rank_intents(vec_consulta, canonical)
 
     assert len(ranking) == 2
-    top1_name, top1_sim, top1_sens, top1_act = ranking[0]
-    top2_name, top2_sim, top2_sens, top2_act = ranking[1]
+    top1_name, top1_sim, top1_sens, top1_act, top1_ent, top1_card = ranking[0]
+    top2_name, top2_sim, top2_sens, top2_act, top2_ent, top2_card = ranking[1]
 
     assert top1_name == "consultar_aire"
     assert top1_sens is False
     assert top1_act == ("show_air",)
+    assert top1_ent == ()
+    assert top1_card is None
     assert top1_sim > top2_sim
     assert top2_name == "cancelar_servicio"
     assert top2_sens is True
+
+
+def test_precompute_canonical_propaga_entity_cardinality(modelo_cargado):
+    config_prueba = {
+        "intents": [
+            {
+                "name": "comparar_calidad_aire",
+                "action": ["compare_zones"],
+                "entity": ["region"],
+                "entity_cardinality": "multiple",
+                "sensitive": False,
+                "phrases": ["compara el aire entre siloe y pance"],
+            },
+            {
+                "name": "consultar_calidad_aire",
+                "action": ["show_air_quality"],
+                "sensitive": False,
+                "phrases": ["como esta el aire hoy"],
+            },
+        ],
+    }
+    canonical = precompute_canonical(config_prueba, modelo=modelo_cargado)
+    assert canonical.entity_types == (("region",), ())
+    assert canonical.entity_cardinality == ("multiple", None)
 
 
 def test_precompute_canonical_sin_intents_levanta_error(modelo_cargado):

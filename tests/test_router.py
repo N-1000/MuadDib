@@ -15,6 +15,8 @@ def _crear_canonical_mock(
     scores: list[float],
     sensitive_flags: tuple[bool, ...],
     actions: tuple[tuple[str, ...], ...],
+    entity_types: tuple[tuple[str, ...], ...] | None = None,
+    entity_cardinality: tuple[str | None, ...] | None = None,
 ) -> tuple[CanonicalEmbeddings, np.ndarray]:
     """Crea centroides mock donde el dot product con vec_query da exactamente scores."""
     dim = 16
@@ -34,6 +36,8 @@ def _crear_canonical_mock(
         phrase_counts=tuple(1 for _ in intents),
         sensitive_flags=sensitive_flags,
         actions=actions,
+        entity_types=entity_types or tuple(() for _ in intents),
+        entity_cardinality=entity_cardinality or tuple(None for _ in intents),
     )
     return canonical, vec_query
 
@@ -48,7 +52,7 @@ def test_umbral_confianza_limites_exactos(monkeypatch):
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_inf)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d_inf = _evaluar_nivel1("test", False, can_inf, umbral=0.60, margen_min=0.05)
+    d_inf = _evaluar_nivel1("test", False, can_inf, umbral=0.60, margen_min=0.05, config={})
     assert d_inf.nivel == 2
     assert "confianza_insuficiente" in d_inf.motivos_escalada
 
@@ -56,7 +60,7 @@ def test_umbral_confianza_limites_exactos(monkeypatch):
     can_borde, v_borde = _crear_canonical_mock(intents, [0.600, 0.400], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_borde)
 
-    d_borde = _evaluar_nivel1("test", False, can_borde, umbral=0.60, margen_min=0.05)
+    d_borde = _evaluar_nivel1("test", False, can_borde, umbral=0.60, margen_min=0.05, config={})
     assert d_borde.nivel == 1
     assert d_borde.intencion == "consultar_aire"
     assert d_borde.motivos_escalada == ()
@@ -65,7 +69,7 @@ def test_umbral_confianza_limites_exactos(monkeypatch):
     can_sup, v_sup = _crear_canonical_mock(intents, [0.601, 0.400], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_sup)
 
-    d_sup = _evaluar_nivel1("test", False, can_sup, umbral=0.60, margen_min=0.05)
+    d_sup = _evaluar_nivel1("test", False, can_sup, umbral=0.60, margen_min=0.05, config={})
     assert d_sup.nivel == 1
     assert d_sup.intencion == "consultar_aire"
     assert d_sup.motivos_escalada == ()
@@ -81,7 +85,7 @@ def test_margen_ambiguedad_limites_exactos(monkeypatch):
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_inf)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d_inf = _evaluar_nivel1("test", False, can_inf, umbral=0.60, margen_min=0.05)
+    d_inf = _evaluar_nivel1("test", False, can_inf, umbral=0.60, margen_min=0.05, config={})
     assert d_inf.nivel == 2
     assert "margen_ambiguo" in d_inf.motivos_escalada
 
@@ -89,7 +93,7 @@ def test_margen_ambiguedad_limites_exactos(monkeypatch):
     can_borde, v_borde = _crear_canonical_mock(intents, [0.700, 0.650], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_borde)
 
-    d_borde = _evaluar_nivel1("test", False, can_borde, umbral=0.60, margen_min=0.05)
+    d_borde = _evaluar_nivel1("test", False, can_borde, umbral=0.60, margen_min=0.05, config={})
     assert d_borde.nivel == 1
     assert d_borde.intencion == "consultar_aire"
     assert d_borde.motivos_escalada == ()
@@ -98,7 +102,7 @@ def test_margen_ambiguedad_limites_exactos(monkeypatch):
     can_sup, v_sup = _crear_canonical_mock(intents, [0.700, 0.649], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_sup)
 
-    d_sup = _evaluar_nivel1("test", False, can_sup, umbral=0.60, margen_min=0.05)
+    d_sup = _evaluar_nivel1("test", False, can_sup, umbral=0.60, margen_min=0.05, config={})
     assert d_sup.nivel == 1
     assert d_sup.intencion == "consultar_aire"
     assert d_sup.motivos_escalada == ()
@@ -113,7 +117,7 @@ def test_compuerta_sensitive_true_en_nivel1_escala_siempre(monkeypatch):
     monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d = _evaluar_nivel1("activa la alerta", False, can, umbral=0.60, margen_min=0.05)
+    d = _evaluar_nivel1("activa la alerta", False, can, umbral=0.60, margen_min=0.05, config={})
     assert d.nivel == 2
     assert d.intencion == "activar_alerta"
     assert d.sensitive is True
@@ -129,7 +133,7 @@ def test_clausula_negada_bloqueada_en_nivel1(monkeypatch):
     monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d = _evaluar_nivel1("no quiero el reporte", True, can, umbral=0.60, margen_min=0.05)
+    d = _evaluar_nivel1("no quiero el reporte", True, can, umbral=0.60, margen_min=0.05, config={})
     assert d.nivel == 2
     assert d.negada is True
     assert "clausula_negada_en_nivel1" in d.motivos_escalada
@@ -144,13 +148,86 @@ def test_registro_exhaustivo_de_multiples_fallos(monkeypatch):
     monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d = _evaluar_nivel1("mensaje ambiguo", True, can, umbral=0.60, margen_min=0.05)
+    d = _evaluar_nivel1("mensaje ambiguo", True, can, umbral=0.60, margen_min=0.05, config={})
     assert d.nivel == 2
     assert "confianza_insuficiente" in d.motivos_escalada
     assert "margen_ambiguo" in d.motivos_escalada
     assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
     assert "clausula_negada_en_nivel1" in d.motivos_escalada
     assert len(d.motivos_escalada) == 4
+
+
+_ENTITY_CATALOG_REGION = {
+    "entity_catalog": {
+        "region": [
+            {"value": "siloe", "keywords": ["siloe"]},
+            {"value": "pance", "keywords": ["pance"]},
+        ],
+    }
+}
+
+
+def test_cardinalidad_multiple_insuficiente_escala_en_nivel1(monkeypatch):
+    can, vec = _crear_canonical_mock(
+        ("comparar_calidad_aire",),
+        [0.900],
+        (False,),
+        (("compare_zones",),),
+        entity_types=(("region",),),
+        entity_cardinality=("multiple",),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1(
+        "como esta el aire en pance", False, can, umbral=0.60, margen_min=0.05, config=_ENTITY_CATALOG_REGION
+    )
+    assert d.nivel == 2
+    assert d.entidades == {"region": ["pance"]}
+    assert "cardinalidad_entidad_insuficiente_en_nivel1" in d.motivos_escalada
+
+
+def test_cardinalidad_multiple_cumplida_resuelve_en_nivel1(monkeypatch):
+    can, vec = _crear_canonical_mock(
+        ("comparar_calidad_aire",),
+        [0.900],
+        (False,),
+        (("compare_zones",),),
+        entity_types=(("region",),),
+        entity_cardinality=("multiple",),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1(
+        "compara pance con siloe", False, can, umbral=0.60, margen_min=0.05, config=_ENTITY_CATALOG_REGION
+    )
+    assert d.nivel == 1
+    assert d.entidades == {"region": ["siloe", "pance"]}
+    assert d.motivos_escalada == ()
+
+
+def test_cardinalidad_multiple_insuficiente_escala_en_nivel0():
+    config = {
+        "intents": [
+            {
+                "name": "comparar_calidad_aire",
+                "phrases": ["como esta el aire en pance"],
+                "action": ["compare_zones"],
+                "entity": ["region"],
+                "entity_cardinality": "multiple",
+                "sensitive": False,
+            }
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
+        **_ENTITY_CATALOG_REGION,
+    }
+    res = resolve("como esta el aire en pance", config)
+    d = res.decisiones[0]
+    assert d.nivel == 2
+    assert d.entidades == {"region": ["pance"]}
+    assert d.accion == ("escalate_to_llm",)
+    assert "cardinalidad_entidad_insuficiente_en_nivel0" in d.motivos_escalada
 
 
 def test_resolucion_nivel0_exact_match():
@@ -285,7 +362,12 @@ def test_resolve_usa_threshold_de_config_yaml_no_el_viejo_default(tmp_path, monk
         "    sensitive: false\n",
         encoding="utf-8",
     )
-    config = cargar_config(config_path, rules_path)
+    entities_path = tmp_path / "entities.yaml"
+    entities_path.write_text(
+        "client: test\nentity_catalog:\n  region:\n    - value: pance\n      keywords: [\"pance\"]\n",
+        encoding="utf-8",
+    )
+    config = cargar_config(config_path, rules_path, entities_path)
 
     can, vec = _crear_canonical_mock(
         ("consultar_aire",), [0.70], (False,), (("show_air",),)

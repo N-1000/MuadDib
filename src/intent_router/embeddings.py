@@ -17,6 +17,8 @@ class CanonicalEmbeddings:
     phrase_counts: tuple[int, ...]
     sensitive_flags: tuple[bool, ...]
     actions: tuple[tuple[str, ...], ...]
+    entity_types: tuple[tuple[str, ...], ...]
+    entity_cardinality: tuple[str | None, ...]
 
 
 _MODELO_GLOBAL: SentenceTransformer | None = None
@@ -72,6 +74,8 @@ def precompute_canonical(
     conteo_frases: list[int] = []
     sensibles: list[bool] = []
     acciones: list[tuple[str, ...]] = []
+    tipos_entidad: list[tuple[str, ...]] = []
+    cardinalidades: list[str | None] = []
 
     for item in intents_data:
         nombre = item["name"]
@@ -89,6 +93,8 @@ def precompute_canonical(
         conteo_frases.append(len(frases_norm))
         sensibles.append(bool(item.get("sensitive", False)))
         acciones.append(tuple(item.get("action", [])))
+        tipos_entidad.append(tuple(item.get("entity", [])))
+        cardinalidades.append(item.get("entity_cardinality"))
 
     return CanonicalEmbeddings(
         intents=tuple(nombres),
@@ -96,13 +102,15 @@ def precompute_canonical(
         phrase_counts=tuple(conteo_frases),
         sensitive_flags=tuple(sensibles),
         actions=tuple(acciones),
+        entity_types=tuple(tipos_entidad),
+        entity_cardinality=tuple(cardinalidades),
     )
 
 
 def rank_intents(
     vector_mensaje: np.ndarray,
     canonical_data: CanonicalEmbeddings,
-) -> list[tuple[str, float, bool, tuple[str, ...]]]:
+) -> list[tuple[str, float, bool, tuple[str, ...], tuple[str, ...], str | None]]:
     """Calcula similitud coseno contra los centroides y retorna ranking descendente."""
     similitudes = np.dot(canonical_data.centroids, vector_mensaje)
     indices_ordenados = np.argsort(-similitudes)
@@ -113,5 +121,7 @@ def rank_intents(
             float(similitudes[idx]),
             canonical_data.sensitive_flags[idx],
             canonical_data.actions[idx],
+            canonical_data.entity_types[idx],
+            canonical_data.entity_cardinality[idx],
         ))
     return ranking

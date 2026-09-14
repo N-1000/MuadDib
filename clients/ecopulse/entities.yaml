@@ -1,0 +1,33 @@
+# entities.yaml v1 — EcoPulse
+#
+# Catalogo de entidades para extract_entities(). Vive en su propio archivo,
+# no en rules_nivel0.yaml (de donde salio originalmente al migrar
+# agent_core.py) ni en canonical.yaml: las entidades no son de un nivel
+# particular, las necesita el router para completar la accion de
+# cualquier nivel (0, 1 o 2) que resuelva la intencion.
+
+client: ecopulse
+
+entity_catalog:
+  region:
+    - value: pance
+      keywords: ["pance"]
+    - value: sur
+      keywords: ["sur", "ciudad jardin", "univalle"]
+    - value: centro
+      keywords: ["centro", "san pedro", "cam"]
+    - value: norte
+      keywords: ["norte", "menga"]
+    - value: occidente
+      keywords: ["occidente", "cristo rey", "farallones", "los cristales"]
+  node:
+    - value: node-pance
+      keywords: ["nodo pance"]
+    - value: node-univalle
+      keywords: ["nodo univalle"]
+    - value: node-centro
+      keywords: ["nodo centro"]
+    - value: node-menga
+      keywords: ["nodo menga"]
+    - value: node-farallones
+      keywords: ["nodo cristo rey", "nodo farallones"]

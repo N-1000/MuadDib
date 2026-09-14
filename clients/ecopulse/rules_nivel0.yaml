@@ -5,7 +5,8 @@
 # Cada intent de abajo es una rama if/elif de ese archivo:
 #   - las keywords del if/elif -> phrases
 #   - los UIAction(type=...)   -> action
-#   - las regiones/nodos de NodeDataService -> entity_catalog + entity
+#   - las regiones/nodos de NodeDataService -> entity (el catalogo en si
+#     vive en entities.yaml, no aca: las entidades no son de Nivel 0)
 #
 # Nivel 0 exige match exacto de la clausula completa contra una phrase
 # (router.py _matchea_intent_nivel0). Las phrases de abajo eran keywords
@@ -36,30 +37,6 @@
 # aunque hoy no haya ningun caso true.
 
 client: ecopulse
-
-entity_catalog:
-  region:
-    - value: pance
-      keywords: ["pance"]
-    - value: sur
-      keywords: ["sur", "ciudad jardin", "univalle"]
-    - value: centro
-      keywords: ["centro", "san pedro", "cam"]
-    - value: norte
-      keywords: ["norte", "menga"]
-    - value: occidente
-      keywords: ["occidente", "cristo rey", "farallones", "los cristales"]
-  node:
-    - value: node-pance
-      keywords: ["nodo pance"]
-    - value: node-univalle
-      keywords: ["nodo univalle"]
-    - value: node-centro
-      keywords: ["nodo centro"]
-    - value: node-menga
-      keywords: ["nodo menga"]
-    - value: node-farallones
-      keywords: ["nodo cristo rey", "nodo farallones"]
 
 intents:
   - name: saludo_cortesia

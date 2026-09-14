@@ -4,6 +4,13 @@
 # Cada intencion mapea oraciones canonicas reales hacia una accion del backend.
 # Convencion: texto normalizado plano (sin tildes, con eñe protegida), alineado con frases.txt.
 # Esquema completo con sensitive: bool obligatorio por regla de arquitectura.
+#
+# entity/entity_cardinality son opcionales: solo se declaran donde la accion
+# necesita una cardinalidad especifica de entidades para tener sentido.
+# comparar_calidad_aire exige "multiple" (>=2 regiones) porque compare_zones
+# no funciona con una sola zona; el router escala a Nivel 2 en vez de
+# despachar la accion si la cardinalidad detectada no coincide con la
+# declarada (ver router.py, gate de entidades).
 
 client: ecopulse
 
@@ -25,6 +32,8 @@ intents:
 
   - name: comparar_calidad_aire
     action: ["compare_zones"]
+    entity: ["region"]
+    entity_cardinality: "multiple"
     sensitive: false
     phrases:
       - "compara la calidad del aire entre siloe y ciudad jardin"

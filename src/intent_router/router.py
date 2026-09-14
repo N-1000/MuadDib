@@ -7,6 +7,7 @@ from intent_router.embeddings import (
     precompute_canonical,
     rank_intents,
 )
+from intent_router.entities import extract_entities
 from intent_router.normalizer import normalize
 from intent_router.rules import analizar
 
@@ -35,6 +36,20 @@ class RoutingResult:
         return len(self.decisiones) > 1
 
 
+def _evaluar_entidades(
+    texto_clausula: str,
+    entity_types: tuple[str, ...],
+    cardinalidad: str | None,
+    config: dict[str, Any],
+) -> tuple[dict[str, list[str]], bool]:
+    """Extrae entidades y evalua si cumplen la cardinalidad que declara la intencion."""
+    entidades = extract_entities(texto_clausula, config)
+    if cardinalidad == "multiple":
+        cumple = all(len(entidades.get(tipo, [])) >= 2 for tipo in entity_types)
+        return entidades, cumple
+    return entidades, True
+
+
 def _evaluar_nivel0(
     texto_clausula: str,
     negada: bool,
@@ -46,7 +61,7 @@ def _evaluar_nivel0(
 
     for intent in intents:
         if _matchea_intent_nivel0(intent, texto_norm):
-            return _construir_decision_nivel0(intent, negada, texto_clausula)
+            return _construir_decision_nivel0(intent, negada, texto_clausula, config_nivel0)
 
     return None
 
@@ -61,8 +76,9 @@ def _construir_decision_nivel0(
     intent: dict[str, Any],
     negada: bool,
     texto_clausula: str,
+    config: dict[str, Any],
 ) -> Decision:
-    """Construye la Decision de Nivel 0; escala a Nivel 2 si la clausula viene negada."""
+    """Construye la Decision de Nivel 0; escala a Nivel 2 si la clausula viene negada o le falta cardinalidad de entidad."""
     nombre = intent["name"]
     sensitive = bool(intent.get("sensitive", False))
 
@@ -78,6 +94,25 @@ def _construir_decision_nivel0(
             clausula=texto_clausula,
         )
 
+    entidades, cardinalidad_ok = _evaluar_entidades(
+        texto_clausula,
+        tuple(intent.get("entity", [])),
+        intent.get("entity_cardinality"),
+        config,
+    )
+    if not cardinalidad_ok:
+        return Decision(
+            intencion=nombre,
+            nivel=2,
+            confianza=1.0,
+            accion=("escalate_to_llm",),
+            sensitive=sensitive,
+            negada=False,
+            motivos_escalada=("cardinalidad_entidad_insuficiente_en_nivel0",),
+            clausula=texto_clausula,
+            entidades=entidades,
+        )
+
     return Decision(
         intencion=nombre,
         nivel=0,
@@ -86,6 +121,7 @@ def _construir_decision_nivel0(
         sensitive=sensitive,
         negada=False,
         clausula=texto_clausula,
+        entidades=entidades,
     )
 
 
@@ -95,6 +131,7 @@ def _evaluar_nivel1(
     canonical_data: CanonicalEmbeddings | None,
     umbral: float,
     margen_min: float,
+    config: dict[str, Any],
 ) -> Decision:
     """Evalua una clausula contra centroides de Nivel 1 registrando compuertas auditables."""
     motivos: list[str] = []
@@ -128,9 +165,11 @@ def _evaluar_nivel1(
             clausula=texto_clausula,
         )
 
-    top1_name, s1, top1_sensitive, top1_action = ranking[0]
+    top1_name, s1, top1_sensitive, top1_action, top1_entity_types, top1_cardinalidad = ranking[0]
     s2 = ranking[1][1] if len(ranking) > 1 else 0.0
     delta = s1 - s2
+
+    entidades, cardinalidad_ok = _evaluar_entidades(texto_clausula, top1_entity_types, top1_cardinalidad, config)
 
     if s1 < umbral:
         motivos.append("confianza_insuficiente")
@@ -144,6 +183,9 @@ def _evaluar_nivel1(
     if negada:
         motivos.append("clausula_negada_en_nivel1")
 
+    if not cardinalidad_ok:
+        motivos.append("cardinalidad_entidad_insuficiente_en_nivel1")
+
     if motivos:
         return Decision(
             intencion=top1_name,
@@ -154,6 +196,7 @@ def _evaluar_nivel1(
             negada=negada,
             motivos_escalada=tuple(motivos),
             clausula=texto_clausula,
+            entidades=entidades,
         )
 
     return Decision(
@@ -165,6 +208,7 @@ def _evaluar_nivel1(
         negada=False,
         motivos_escalada=(),
         clausula=texto_clausula,
+        entidades=entidades,
     )
 
 
@@ -187,7 +231,7 @@ def resolve(
         decision_n0 = _evaluar_nivel0(mensaje, False, config)
         if decision_n0 is not None:
             return RoutingResult(mensaje=mensaje, decisiones=(decision_n0,))
-        decision_n1 = _evaluar_nivel1(mensaje, False, canonical_data, umbral, margen_min)
+        decision_n1 = _evaluar_nivel1(mensaje, False, canonical_data, umbral, margen_min, config)
         return RoutingResult(mensaje=mensaje, decisiones=(decision_n1,))
 
     for c in clausulas:
@@ -196,7 +240,7 @@ def resolve(
             decisiones.append(decision_n0)
             continue
 
-        decision_n1 = _evaluar_nivel1(c.texto, c.negada, canonical_data, umbral, margen_min)
+        decision_n1 = _evaluar_nivel1(c.texto, c.negada, canonical_data, umbral, margen_min, config)
         decisiones.append(decision_n1)
 
     return RoutingResult(mensaje=mensaje, decisiones=tuple(decisiones))
