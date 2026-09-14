@@ -1,0 +1,131 @@
+# canonical.yaml v1 — EcoPulse
+#
+# Extraido literalmente de EcoPulse-IAU-2026/backend/app/services/agent_core.py
+# (el mismo agent_core.py que CLAUDE.md referencia en la regla de dependencia).
+# Cada intent de abajo es una rama if/elif de ese archivo:
+#   - las keywords del if/elif -> phrases
+#   - los UIAction(type=...)   -> action
+#   - las regiones/nodos de NodeDataService -> entity_catalog + entity
+#
+# El orden de la lista `intents` preserva el orden original de las ramas
+# if/elif: si un mensaje matchea mas de una, gana la primera de la lista,
+# igual que en el codigo original (evaluacion secuencial, no la mas
+# especifica ni la de mayor score).
+#
+# Ninguna accion de agent_core.py tiene efecto real (todas son
+# navegacion/despliegue de UI de solo lectura), por eso sensitive: false
+# en las 10. El campo esta declarado desde ya por regla de arquitectura,
+# aunque hoy no haya ningun caso true.
+
+client: ecopulse
+
+entity_catalog:
+  region:
+    - value: pance
+      keywords: ["pance"]
+    - value: sur
+      keywords: ["sur", "ciudad jardin", "univalle"]
+    - value: centro
+      keywords: ["centro", "san pedro", "cam"]
+    - value: norte
+      keywords: ["norte", "menga"]
+    - value: occidente
+      keywords: ["occidente", "cristo rey", "farallones", "los cristales"]
+  node:
+    - value: node-pance
+      keywords: ["nodo pance"]
+    - value: node-univalle
+      keywords: ["nodo univalle"]
+    - value: node-centro
+      keywords: ["nodo centro"]
+    - value: node-menga
+      keywords: ["nodo menga"]
+    - value: node-farallones
+      keywords: ["nodo cristo rey", "nodo farallones"]
+
+intents:
+  - name: consultar_nodo_mas_contaminado
+    phrases:
+      - "nodo con mayor contaminacion"
+      - "mas contaminado"
+    entity: []
+    action: ["navigate", "focus_node"]
+    sensitive: false
+
+  - name: consultar_pronostico
+    phrases:
+      - "calidad del aire manana"
+      - "pronostico"
+      - "prediccion"
+    entity: []
+    action: ["navigate"]
+    sensitive: false
+
+  - name: consultar_ruta_saludable
+    phrases:
+      - "ruta es mas saludable"
+      - "correr"
+    entity: []
+    action: ["navigate", "enable_tool"]
+    sensitive: false
+
+  - name: consultar_comunas_limpias
+    match: all # unico intent que requiere TODAS las phrases (AND), no OR como el resto
+    phrases:
+      - "comunas"
+      - "limpio"
+    entity: ["region"]
+    action: ["show_quality_air"]
+    sensitive: false
+
+  - name: consultar_plan_pance
+    phrases:
+      - "pance"
+    entity: ["region"]
+    action: ["show_quality_air"]
+    sensitive: false
+
+  - name: consultar_plan_caminata
+    phrases:
+      - "caminata"
+      - "caminar"
+      - "senderismo"
+    entity: []
+    action: ["navigate"]
+    sensitive: false
+
+  - name: consultar_plan_bici
+    phrases:
+      - "bici"
+      - "bicicleta"
+    entity: []
+    action: ["navigate"]
+    sensitive: false
+
+  - name: consultar_plan_borondo
+    phrases:
+      - "borondo"
+      - "turistico"
+      - "tour"
+    entity: []
+    action: ["navigate"]
+    sensitive: false
+
+  - name: navegar_mapa
+    phrases:
+      - "mapa"
+      - "nodos"
+      - "ubicacion"
+      - "donde"
+    entity: []
+    action: ["navigate"]
+    sensitive: false
+
+  - name: navegar_inicio
+    phrases:
+      - "inicio"
+      - "home"
+      - "principal"
+    entity: []
+    action: ["navigate"]
+    sensitive: false
