@@ -65,9 +65,9 @@ Nombres de módulo/carpeta ya definidos en la doc técnica del proyecto — no s
 
 1. Dirección de dependencia única: `agent_core.py → intent_router`. El router nunca importa el agente ni nada de `clients/`.
 2. Config inyectada como parámetro, nunca importada directo — aunque hoy exista un solo cliente.
-3. Lógica del algoritmo idéntica para todos los clientes; solo cambian los datos de `canonical.yaml`.
+3. Lógica del algoritmo idéntica para todos los clientes; solo cambian los datos de la configuración del cliente (ej: `rules_nivel0.yaml`).
 4. Lo que la config declarativa no cubra va en extensiones aisladas, nunca como código custom dentro del core.
-5. Esquema fijo de `canonical.yaml` completo desde ya, incluyendo `sensitive: bool` — aunque el flujo de revisión que lo consume (ciclo de aprendizaje) todavía no exista. El campo es gratis ahora; migrarlo después no lo es.
+5. Esquema fijo de la configuración del cliente completo desde ya, incluyendo `sensitive: bool` — aunque el flujo de revisión que lo consume (ciclo de aprendizaje) todavía no exista. El campo es gratis ahora; migrarlo después no lo es.
 
 ## Comportamiento del router (aplica ya, no es "seguridad de producción")
 

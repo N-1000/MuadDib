@@ -1,4 +1,4 @@
-# canonical.yaml v1 — EcoPulse
+# rules_nivel0.yaml v1 — EcoPulse
 #
 # Extraido literalmente de EcoPulse-IAU-2026/backend/app/services/agent_core.py
 # (el mismo agent_core.py que CLAUDE.md referencia en la regla de dependencia).
