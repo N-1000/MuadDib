@@ -26,12 +26,15 @@ def test_no_toca_emojis():
 
 
 def test_selector_de_variacion_se_pierde_como_cualquier_mn():
-    # "⚠️" son dos codepoints: la advertencia (So) + un selector de
-    # variacion (U+FE0F, categoria Mn). normalize() lo saca junto con
+    # El emoji de advertencia con estilo emoji son dos codepoints: la
+    # advertencia (So) + un selector de variacion (U+FE0F, categoria
+    # Mn). normalize() lo saca junto con
     # los acentos porque es exactamente lo que hace: sacar todo lo Mn.
     # El emoji base sobrevive; el selector no tiene valor semantico para
     # clasificar intencion, asi que no hace falta protegerlo.
-    assert normalize("⚠️ atención") == "⚠ atencion"
+    entrada = "\u26a0\ufe0f atenci\u00f3n"
+    assert len(entrada) == 11
+    assert normalize(entrada) == "\u26a0 atencion"
 
 
 def test_emoji_no_rompe_idempotencia():
