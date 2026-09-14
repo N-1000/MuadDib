@@ -5,6 +5,22 @@
 # agent_core.py) ni en canonical.yaml: las entidades no son de un nivel
 # particular, las necesita el router para completar la accion de
 # cualquier nivel (0, 1 o 2) que resuelva la intencion.
+#
+# "siloe" agregado como keyword de la region "occidente": aparecia en
+# canonical.yaml (comparar_calidad_aire) y en frases.txt pero no en este
+# catalogo, asi que la compuerta de cardinalidad de comparar_calidad_aire
+# escalaba mensajes que deberia resolver. No hay acceso desde este repo
+# al NodeDataService real para confirmar el node id -- geograficamente
+# Siloe esta en la misma ladera occidental que Cristo Rey/Farallones/Los
+# Cristales (ya cubiertos por "occidente"), asi que se agrego ahi. Si
+# el backend real lo modela distinto, corregir aca.
+#
+# Pendiente, fuera de este barrido: "melendez" y "chipichape" aparecen en
+# canonical.yaml/frases.txt como nombres de sensor/estacion, no de region,
+# y no hay tipo de entidad "sensor" en este catalogo. Ningun intent
+# declara hoy cardinalidad sobre ese tipo, asi que no afecta la compuerta
+# ni la medicion de simulate_cascade.py -- pero es el mismo patron de
+# catalogo incompleto, en otro tipo de entidad.
 
 client: ecopulse
 
@@ -19,7 +35,7 @@ entity_catalog:
     - value: norte
       keywords: ["norte", "menga"]
     - value: occidente
-      keywords: ["occidente", "cristo rey", "farallones", "los cristales"]
+      keywords: ["occidente", "cristo rey", "farallones", "los cristales", "siloe"]
   node:
     - value: node-pance
       keywords: ["nodo pance"]
