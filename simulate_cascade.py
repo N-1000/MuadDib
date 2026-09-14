@@ -3,7 +3,7 @@ import yaml
 from eval_corpus_baseline import CORPUS_67, CANONICAL_PATH
 from intent_router.config_loader import cargar_config
 from intent_router.embeddings import MODEL_DEFAULT, load_model, precompute_canonical
-from intent_router.router import Decision, resolve
+from intent_router.router import Decision, _evaluar_nivel1, resolve
 
 CONFIG_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "config.yaml"
 RULES_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "rules_nivel0.yaml"
@@ -23,13 +23,16 @@ def es_acierto(decision: Decision, esperado) -> bool | None:
     return decision.intencion == esperado
 
 
-def medir_cascada() -> list[dict]:
+def cargar_dependencias() -> tuple[dict, object]:
     config = cargar_config(CONFIG_PATH, RULES_PATH)
     modelo = load_model(MODEL_DEFAULT)
     if modelo is None:
         raise RuntimeError("No se pudo cargar el modelo de embeddings; no se puede medir la cascada real.")
     canonical_data = cargar_canonical_embeddings(modelo)
+    return config, canonical_data
 
+
+def medir_cascada(config: dict, canonical_data) -> list[dict]:
     filas = []
     for item in CORPUS_67:
         resultado = resolve(item["mensaje"], config, canonical_data=canonical_data)
@@ -43,7 +46,19 @@ def medir_cascada() -> list[dict]:
     return filas
 
 
-def imprimir_reporte(filas: list[dict]) -> None:
+def medir_bypass_nivel0(filas_n0: list[dict], config: dict, canonical_data) -> list[dict]:
+    """Para cada clausula resuelta en Nivel 0, evalua que haria Nivel 1 si Nivel 0 no la interceptara."""
+    umbral = float(config["routing"]["threshold"])
+    margen_min = float(config["routing"]["min_margin"])
+
+    bypass = []
+    for f in filas_n0:
+        decision_bypass = _evaluar_nivel1(f["decision"].clausula, False, canonical_data, umbral, margen_min)
+        bypass.append({**f, "decision_bypass": decision_bypass})
+    return bypass
+
+
+def imprimir_reporte(filas: list[dict], config: dict, canonical_data) -> None:
     total_mensajes = len(CORPUS_67)
     total_clausulas = len(filas)
 
@@ -68,6 +83,26 @@ def imprimir_reporte(filas: list[dict]) -> None:
         ok_tag = "-" if ok is None else ("OK" if ok else "FALLO")
         origen = "" if d.clausula == f["mensaje"] else f"  [clausula de: '{f['mensaje']}']"
         print(f"   - [{ok_tag}] '{d.clausula}' -> {d.intencion} | Esp: {f['esperado']}{origen}")
+
+    n0_con_esperado = [f for f, ok in zip(n0, aciertos_n0) if ok is not None]
+    if n0_con_esperado:
+        print(f"\n   BYPASS: que haria Nivel 1 si Nivel 0 no interceptara estas {len(n0_con_esperado)} clausulas")
+        print("   (mide el costo real de sacar estas phrases de rules_nivel0.yaml: si N1 ya acierta,")
+        print("    el costo es cero; si N1 tambien falla o escala, el error se mueve de capa)")
+        bypass = medir_bypass_nivel0(n0_con_esperado, config, canonical_data)
+        n1_hubiera_acertado = 0
+        for f in bypass:
+            d0 = f["decision"]
+            db = f["decision_bypass"]
+            ok_bypass = es_acierto(db, f["esperado"])
+            if db.nivel == 1:
+                resultado_str = f"resuelve: {db.intencion} (confianza={db.confianza:.4f}) -> {'OK' if ok_bypass else 'FALLO'}"
+                if ok_bypass:
+                    n1_hubiera_acertado += 1
+            else:
+                resultado_str = f"escala: {' + '.join(db.motivos_escalada)}"
+            print(f"   - '{d0.clausula}' | Nivel0 dio: {d0.intencion} (Esp: {f['esperado']}) | Nivel1 bypass: {resultado_str}")
+        print(f"   - Resumen: de {len(n0_con_esperado)} hijacks de Nivel 0, Nivel 1 hubiera acertado en {n1_hubiera_acertado}")
 
     print(f"\n2. RESUELTOS EN NIVEL 1 (Embeddings): {len(n1)}/{total_clausulas} ({len(n1)/total_clausulas*100:.1f}%)")
     aciertos = [es_acierto(f["decision"], f["esperado"]) for f in n1]
@@ -101,8 +136,9 @@ def imprimir_reporte(filas: list[dict]) -> None:
 
 
 def main() -> None:
-    filas = medir_cascada()
-    imprimir_reporte(filas)
+    config, canonical_data = cargar_dependencias()
+    filas = medir_cascada(config, canonical_data)
+    imprimir_reporte(filas, config, canonical_data)
 
 
 if __name__ == "__main__":
