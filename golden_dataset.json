@@ -1,0 +1,677 @@
+[
+  {
+    "mensaje": "Mostrame la calidad del aire de hoy",
+    "intencion_esperada": "consultar_calidad_aire",
+    "verbos_esperados": [
+      "mostrar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Dame el reporte semanal",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      "dar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Activa las alertas de contaminacion",
+    "intencion_esperada": "activar_alerta",
+    "verbos_esperados": [
+      "activar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Cancela la notificacion de la tarde",
+    "intencion_esperada": "cancelar_notificacion",
+    "verbos_esperados": [
+      "cancelar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Enviame el pdf del mes pasado",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      "enviar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Actualiza los datos del sensor",
+    "intencion_esperada": "actualizar_sensor",
+    "verbos_esperados": [
+      "actualizar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Configura la alerta para PM2.5",
+    "intencion_esperada": "configurar_alerta",
+    "verbos_esperados": [
+      "configurar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Revisa el sensor de Melendez",
+    "intencion_esperada": "revisar_sensor",
+    "verbos_esperados": [
+      "revisar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Compara la calidad del aire entre Siloe y Ciudad Jardin",
+    "intencion_esperada": "comparar_calidad_aire",
+    "verbos_esperados": [
+      "comparar"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Avisame si sube la contaminacion",
+    "intencion_esperada": "configurar_notificacion",
+    "verbos_esperados": [
+      "avisar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Notificame cuando el aire este malo",
+    "intencion_esperada": "configurar_notificacion",
+    "verbos_esperados": [
+      "notificar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Agrega el sensor nuevo a mi lista",
+    "intencion_esperada": "agregar_sensor",
+    "verbos_esperados": [
+      "agregar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Quita la alerta de las mananas",
+    "intencion_esperada": "cancelar_alerta",
+    "verbos_esperados": [
+      "quitar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Repeti el ultimo reporte",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      "repetir"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Confirma el cambio de horario",
+    "intencion_esperada": "confirmar_cambio",
+    "verbos_esperados": [
+      "confirmar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Ayudame a entender estos datos",
+    "intencion_esperada": "pedir_ayuda",
+    "verbos_esperados": [
+      "ayudar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Explicame que significa el indice AQI",
+    "intencion_esperada": "pedir_explicacion",
+    "verbos_esperados": [
+      "explicar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Guiame para configurar mi cuenta",
+    "intencion_esperada": "pedir_ayuda",
+    "verbos_esperados": [
+      "guiar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Busca el sensor mas cercano",
+    "intencion_esperada": "buscar_sensor",
+    "verbos_esperados": [
+      "buscar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Encontra la estacion de Chipichape",
+    "intencion_esperada": "buscar_sensor",
+    "verbos_esperados": [
+      "encontrar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Mostrrame el reporte de hoy",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      "mostrar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": "typo con ratio 75.0 contra 'mostrar', por debajo de UMBRAL_DEFECTO=90"
+  },
+  {
+    "mensaje": "Cancelaa la alerta",
+    "intencion_esperada": "cancelar_alerta",
+    "verbos_esperados": [
+      "cancelar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": "typo con ratio 87.5 contra 'cancelar', por debajo de UMBRAL_DEFECTO=90"
+  },
+  {
+    "mensaje": "Actualisa los datos",
+    "intencion_esperada": "actualizar_sensor",
+    "verbos_esperados": [
+      "actualizar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": "typo con ratio 84.2 contra 'actualizar', por debajo de UMBRAL_DEFECTO=90"
+  },
+  {
+    "mensaje": "Confirurar el sensor",
+    "intencion_esperada": "ambiguo_no_resoluble",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "No quiero mas notificaciones",
+    "intencion_esperada": "rechazar_notificaciones",
+    "verbos_esperados": [
+      "querer"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": true,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "No quiero el reporte pero mandame la alerta",
+    "intencion_esperada": "rechazar_y_solicitar",
+    "verbos_esperados": [
+      "querer",
+      "mandar"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": true,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "No me mandes nada hoy",
+    "intencion_esperada": "rechazar_notificaciones",
+    "verbos_esperados": [
+      "mandar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": true,
+    "gap_conocido": "'mandes' (subjuntivo) no esta en VARIANTES_VERBO; ratio 66.7 contra 'mandar', por debajo del umbral"
+  },
+  {
+    "mensaje": "Nunca me avises los fines de semana",
+    "intencion_esperada": "rechazar_notificaciones",
+    "verbos_esperados": [
+      "avisar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": true,
+    "gap_conocido": "'avises' (subjuntivo) no esta en VARIANTES_VERBO; ratio 66.7 contra 'avisar', por debajo del umbral"
+  },
+  {
+    "mensaje": "Dame el reporte y activa la alerta",
+    "intencion_esperada": "solicitar_reporte_y_activar_alerta",
+    "verbos_esperados": [
+      "dar",
+      "activar"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Mostrame el mapa y dime el pronostico",
+    "intencion_esperada": "mostrar_mapa_y_pronostico",
+    "verbos_esperados": [
+      "mostrar",
+      "decir"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Cancela la alerta pero tambien mandame el resumen",
+    "intencion_esperada": "cancelar_alerta_y_solicitar_resumen",
+    "verbos_esperados": [
+      "cancelar",
+      "mandar"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Como esta el aire hoy",
+    "intencion_esperada": "consultar_calidad_aire",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Cual es el indice de calidad del aire",
+    "intencion_esperada": "consultar_indice_calidad",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Que contamina mas en Cali",
+    "intencion_esperada": "consultar_fuente_contaminacion",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Cuando va a mejorar el aire",
+    "intencion_esperada": "consultar_prediccion",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Donde esta el sensor mas cercano",
+    "intencion_esperada": "buscar_sensor",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Cuanto pm2.5 hay ahorita",
+    "intencion_esperada": "consultar_valor_puntual",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Por que esta tan contaminado hoy",
+    "intencion_esperada": "consultar_causa_contaminacion",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Quien reporta estos datos",
+    "intencion_esperada": "consultar_fuente_datos",
+    "verbos_esperados": [
+      "reportar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Que tan grave esta la contaminacion",
+    "intencion_esperada": "consultar_severidad",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Cual sensor esta fallando",
+    "intencion_esperada": "consultar_estado_sensor",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Hola",
+    "intencion_esperada": "saludo",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Buenas tardes",
+    "intencion_esperada": "saludo",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Gracias",
+    "intencion_esperada": "agradecimiento",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Chao",
+    "intencion_esperada": "despedida",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Como estas",
+    "intencion_esperada": "saludo",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Todo bien por aca",
+    "intencion_esperada": "smalltalk",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Oiga y como esta el aire por mi barrio",
+    "intencion_esperada": "consultar_calidad_aire",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Parce mandame el reporte de una vez",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      "mandar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Ve activame la alerta pues",
+    "intencion_esperada": "activar_alerta",
+    "verbos_esperados": [
+      "activar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Dele mostrame los datos",
+    "intencion_esperada": "consultar_calidad_aire",
+    "verbos_esperados": [
+      "mostrar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Listo cancela todo",
+    "intencion_esperada": "cancelar_todo",
+    "verbos_esperados": [
+      "cancelar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "El aire de Siloe",
+    "intencion_esperada": "consultar_calidad_aire",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "La alerta de hoy",
+    "intencion_esperada": "ambiguo_fragmento",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Sensor de Melendez",
+    "intencion_esperada": "consultar_sensor",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Reporte semanal",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Contaminacion en el centro",
+    "intencion_esperada": "consultar_calidad_aire",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Buenas necesito saber como esta el aire en mi zona y si es necesario activar la alerta por favor",
+    "intencion_esperada": "consultar_y_activar_alerta",
+    "verbos_esperados": [
+      "necesitar",
+      "activar"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Quisiera un reporte completo de la ultima semana con los niveles de pm2.5 y ozono",
+    "intencion_esperada": "solicitar_reporte",
+    "verbos_esperados": [
+      "querer"
+    ],
+    "tiene_conector_esperado": true,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Podrias decirme si hoy es un buen dia para salir a correr",
+    "intencion_esperada": "consultar_recomendacion_actividad",
+    "verbos_esperados": [
+      "poder"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": "'podrias' (condicional de poder) no esta en VARIANTES_VERBO; ratio 66.7 contra 'poder'"
+  },
+  {
+    "mensaje": "Mostrame que esta pasando",
+    "intencion_esperada": "consultar_estado_general",
+    "verbos_esperados": [
+      "mostrar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Decime el estado del sensor",
+    "intencion_esperada": "consultar_estado_sensor",
+    "verbos_esperados": [
+      "decir"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Ayudame con esto por favor",
+    "intencion_esperada": "pedir_ayuda",
+    "verbos_esperados": [
+      "ayudar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Necesito saber si puedo salir a trotar",
+    "intencion_esperada": "consultar_recomendacion_actividad",
+    "verbos_esperados": [
+      "necesitar"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Se puede confiar en estos datos",
+    "intencion_esperada": "consultar_confiabilidad_datos",
+    "verbos_esperados": [
+      "poder"
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": "'puede' (3ra persona presente de poder) no esta en VARIANTES_VERBO, solo 'puedo'/'podes'; ratio 60.0 contra 'poder'"
+  },
+  {
+    "mensaje": "Hay algun problema con la estacion del sur",
+    "intencion_esperada": "reportar_problema",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  },
+  {
+    "mensaje": "Esta funcionando bien todo",
+    "intencion_esperada": "consultar_estado_general",
+    "verbos_esperados": [
+      null
+    ],
+    "tiene_conector_esperado": false,
+    "tiene_negacion_esperada": false,
+    "gap_conocido": null
+  }
+]

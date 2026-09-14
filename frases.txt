@@ -1,0 +1,67 @@
+Mostrame la calidad del aire de hoy
+Dame el reporte semanal
+Activa las alertas de contaminacion
+Cancela la notificacion de la tarde
+Enviame el pdf del mes pasado
+Actualiza los datos del sensor
+Configura la alerta para PM2.5
+Revisa el sensor de Melendez
+Compara la calidad del aire entre Siloe y Ciudad Jardin
+Avisame si sube la contaminacion
+Notificame cuando el aire este malo
+Agrega el sensor nuevo a mi lista
+Quita la alerta de las mananas
+Repeti el ultimo reporte
+Confirma el cambio de horario
+Ayudame a entender estos datos
+Explicame que significa el indice AQI
+Guiame para configurar mi cuenta
+Busca el sensor mas cercano
+Encontra la estacion de Chipichape
+Mostrrame el reporte de hoy
+Cancelaa la alerta
+Actualisa los datos
+Confirurar el sensor
+No quiero mas notificaciones
+No quiero el reporte pero mandame la alerta
+No me mandes nada hoy
+Nunca me avises los fines de semana
+Dame el reporte y activa la alerta
+Mostrame el mapa y dime el pronostico
+Cancela la alerta pero tambien mandame el resumen
+Como esta el aire hoy
+Cual es el indice de calidad del aire
+Que contamina mas en Cali
+Cuando va a mejorar el aire
+Donde esta el sensor mas cercano
+Cuanto pm2.5 hay ahorita
+Por que esta tan contaminado hoy
+Quien reporta estos datos
+Que tan grave esta la contaminacion
+Cual sensor esta fallando
+Hola
+Buenas tardes
+Gracias
+Chao
+Como estas
+Todo bien por aca
+Oiga y como esta el aire por mi barrio
+Parce mandame el reporte de una vez
+Ve activame la alerta pues
+Dele mostrame los datos
+Listo cancela todo
+El aire de Siloe
+La alerta de hoy
+Sensor de Melendez
+Reporte semanal
+Contaminacion en el centro
+Buenas necesito saber como esta el aire en mi zona y si es necesario activar la alerta por favor
+Quisiera un reporte completo de la ultima semana con los niveles de pm2.5 y ozono
+Podrias decirme si hoy es un buen dia para salir a correr
+Mostrame que esta pasando
+Decime el estado del sensor
+Ayudame con esto por favor
+Necesito saber si puedo salir a trotar
+Se puede confiar en estos datos
+Hay algun problema con la estacion del sur
+Esta funcionando bien todo
