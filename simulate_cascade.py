@@ -1,142 +1,109 @@
-import json
 from pathlib import Path
 import yaml
-from eval_corpus_baseline import CORPUS_67, CANONICAL_PATH, OUTPUT_JSON as BASELINE_JSON
-from intent_router.rules import analizar
+from eval_corpus_baseline import CORPUS_67, CANONICAL_PATH
+from intent_router.config_loader import cargar_config
+from intent_router.embeddings import MODEL_DEFAULT, load_model, precompute_canonical
+from intent_router.router import Decision, resolve
+
+CONFIG_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "config.yaml"
+RULES_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "rules_nivel0.yaml"
 
 
-def cargar_sensitive_intents(ruta: Path) -> set[str]:
-    with open(ruta, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return {item["name"] for item in data.get("intents", []) if item.get("sensitive", False)}
+def cargar_canonical_embeddings(modelo):
+    with open(CANONICAL_PATH, "r", encoding="utf-8") as f:
+        canonical_yaml = yaml.safe_load(f)
+    return precompute_canonical({"intents": canonical_yaml.get("intents", [])}, modelo)
 
 
-def tiene_clausula_negada(mensaje: str) -> bool:
-    analisis = analizar(mensaje)
-    return any(c.negada for c in analisis.clausulas)
+def es_acierto(decision: Decision, esperado) -> bool | None:
+    if esperado is None or decision.intencion is None:
+        return None
+    if isinstance(esperado, list):
+        return decision.intencion in esperado
+    return decision.intencion == esperado
 
 
-def simular_cascada(umbral_theta=0.60, margen_min=0.05):
-    with open(BASELINE_JSON, "r", encoding="utf-8") as f:
-        baseline_data = json.load(f)
+def medir_cascada() -> list[dict]:
+    config = cargar_config(CONFIG_PATH, RULES_PATH)
+    modelo = load_model(MODEL_DEFAULT)
+    if modelo is None:
+        raise RuntimeError("No se pudo cargar el modelo de embeddings; no se puede medir la cascada real.")
+    canonical_data = cargar_canonical_embeddings(modelo)
 
-    sensitive_intents = cargar_sensitive_intents(CANONICAL_PATH)
-
-    # Identificar mensajes que resuelve Nivel 0 segun las reglas conocidas
-    # Saludos (6 exactos) y las 3 frases del rules_nivel0.yaml que matchean literal
-    nivel0_mensajes = {
-        "Hola", "Buenas tardes", "Gracias", "Chao", "Como estas", "Todo bien por aca",
-        "Mostrame la calidad del aire de hoy",  # matchea mostrar + aire
-        "Dame el reporte semanal",             # matchea dar + reporte
-        "Activa las alertas de contaminacion", # matchea activar + alerta (sensitive en N0)
-    }
-
-    resueltos_n0 = []
-    resueltos_n1 = []
-    escalados_a_n2 = []
-
-    for item in baseline_data:
-        msg = item["mensaje"]
-        s1 = item["s1"]
-        delta = item["delta"]
-        top1 = item["top1_intent"]
-        bloque = item["bloque"]
-        esperado = item["esperado"]
-
-        # 1. Paso por Nivel 0
-        if msg in nivel0_mensajes:
-            resueltos_n0.append({
-                "mensaje": msg,
-                "nivel": "Nivel 0",
-                "razon": "Regla determinista / exact-match",
-                "intencion": esperado if esperado else "saludo_cortesia",
+    filas = []
+    for item in CORPUS_67:
+        resultado = resolve(item["mensaje"], config, canonical_data=canonical_data)
+        for decision in resultado.decisiones:
+            filas.append({
+                "mensaje": item["mensaje"],
+                "bloque": item["bloque"],
+                "esperado": item["esperado"],
+                "decision": decision,
             })
-            continue
+    return filas
 
-        # 2. Paso por Nivel 1 (Embeddings)
-        # Condiciones de fallo/escalada de N1 (independientes, igual que router.py):
-        # a) Intencion sensible: N1 no puede resolverla
-        es_sensible = top1 in sensitive_intents
 
-        # b) Confianza insuficiente
-        confianza_baja = s1 < umbral_theta
+def imprimir_reporte(filas: list[dict]) -> None:
+    total_mensajes = len(CORPUS_67)
+    total_clausulas = len(filas)
 
-        # c) Ambiguedad
-        ambiguo = delta < margen_min
-
-        # d) Clausula negada: N1 no puede resolverla, igual que sensitive
-        negada = tiene_clausula_negada(msg)
-
-        razones_activas = []
-        if es_sensible:
-            razones_activas.append("Bloqueo fail-safe: intencion sensitive=true en Nivel 1")
-        if confianza_baja:
-            razones_activas.append(f"Confianza baja (s1={s1:.4f} < theta={umbral_theta:.2f})")
-        if ambiguo:
-            razones_activas.append(f"Margen ambiguo (delta={delta:+.4f} < margen_min={margen_min:.2f})")
-        if negada:
-            razones_activas.append("Clausula negada: bloqueo fail-safe en Nivel 1")
-
-        if razones_activas:
-            escalados_a_n2.append({
-                "mensaje": msg,
-                "bloque": bloque,
-                "esperado": esperado,
-                "candidato_n1": top1,
-                "s1": s1,
-                "delta": delta,
-                "razones": razones_activas,
-            })
-        else:
-            # Resuelto por Nivel 1
-            acierto_n1 = (top1 == esperado) if esperado else False
-            resueltos_n1.append({
-                "mensaje": msg,
-                "bloque": bloque,
-                "esperado": esperado,
-                "intencion_n1": top1,
-                "s1": s1,
-                "delta": delta,
-                "acierto": acierto_n1,
-            })
-
-    total = len(baseline_data)
     print("=" * 95)
-    print(f"SIMULACION DE ENRUTAMIENTO EN CASCADA (Total: {total} mensajes)")
-    print(f"Parametros N1: umbral_theta = {umbral_theta:.2f}, margen_min = {margen_min:.2f}")
+    print("MEDICION DE LA CASCADA REAL (resolve() con config.yaml + rules_nivel0.yaml + canonical.yaml)")
+    print(f"Mensajes de entrada: {total_mensajes} | Clausulas efectivamente enrutadas: {total_clausulas}")
     print("=" * 95)
 
-    print(f"\n1. RESUELTOS EN NIVEL 0 (Reglas / Saludos): {len(resueltos_n0)}/{total} ({len(resueltos_n0)/total*100:.1f}%)")
-    for r in resueltos_n0:
-        print(f"   - '{r['mensaje']}' -> {r['intencion']}")
+    n0 = [f for f in filas if f["decision"].nivel == 0]
+    n1 = [f for f in filas if f["decision"].nivel == 1]
+    n2 = [f for f in filas if f["decision"].nivel == 2]
 
-    print(f"\n2. RESUELTOS EN NIVEL 1 (Embeddings): {len(resueltos_n1)}/{total} ({len(resueltos_n1)/total*100:.1f}%)")
-    n1_aciertos = sum(1 for r in resueltos_n1 if r["acierto"])
-    print(f"   - Precision en Nivel 1: {n1_aciertos}/{len(resueltos_n1)} ({n1_aciertos/len(resueltos_n1)*100:.1f}% aciertos)")
-    for r in resueltos_n1:
-        ok_tag = "OK" if r["acierto"] else "FALLO"
-        print(f"   - [{ok_tag}] '{r['mensaje']}' -> {r['intencion_n1']} (s1={r['s1']:.4f}, delta={r['delta']:+.4f}) | Esp: {r['esperado']}")
+    print(f"\n1. RESUELTOS EN NIVEL 0 (Reglas deterministas): {len(n0)}/{total_clausulas} ({len(n0)/total_clausulas*100:.1f}%)")
+    print("   (esperado usa el vocabulario de canonical.yaml, no el de rules_nivel0.yaml;")
+    print("    el chequeo es 'la accion despachada es la que el usuario queria', no un match de nombre)")
+    aciertos_n0 = [es_acierto(f["decision"], f["esperado"]) for f in n0]
+    juzgables_n0 = [a for a in aciertos_n0 if a is not None]
+    if juzgables_n0:
+        print(f"   - Precision en Nivel 0 (excluye saludos, sin intent esperado): {sum(juzgables_n0)}/{len(juzgables_n0)} ({sum(juzgables_n0)/len(juzgables_n0)*100:.1f}% aciertos)")
+    for f, ok in zip(n0, aciertos_n0):
+        d = f["decision"]
+        ok_tag = "-" if ok is None else ("OK" if ok else "FALLO")
+        origen = "" if d.clausula == f["mensaje"] else f"  [clausula de: '{f['mensaje']}']"
+        print(f"   - [{ok_tag}] '{d.clausula}' -> {d.intencion} | Esp: {f['esperado']}{origen}")
 
-    print(f"\n3. ESCALADOS A NIVEL 2 (LLM): {len(escalados_a_n2)}/{total} ({len(escalados_a_n2)/total*100:.1f}%)")
-    razones = {}
-    for r in escalados_a_n2:
-        for razon in r["razones"]:
-            r_tipo = razon.split("(")[0].strip()
-            razones[r_tipo] = razones.get(r_tipo, 0) + 1
+    print(f"\n2. RESUELTOS EN NIVEL 1 (Embeddings): {len(n1)}/{total_clausulas} ({len(n1)/total_clausulas*100:.1f}%)")
+    aciertos = [es_acierto(f["decision"], f["esperado"]) for f in n1]
+    juzgables = [a for a in aciertos if a is not None]
+    if juzgables:
+        print(f"   - Precision en Nivel 1: {sum(juzgables)}/{len(juzgables)} ({sum(juzgables)/len(juzgables)*100:.1f}% aciertos)")
+    for f, ok in zip(n1, aciertos):
+        d = f["decision"]
+        ok_tag = "-" if ok is None else ("OK" if ok else "FALLO")
+        print(f"   - [{ok_tag}] '{d.clausula}' -> {d.intencion} (confianza={d.confianza:.4f}) | Esp: {f['esperado']}")
+
+    print(f"\n3. ESCALADOS A NIVEL 2 (LLM): {len(n2)}/{total_clausulas} ({len(n2)/total_clausulas*100:.1f}%)")
+    razones: dict[str, int] = {}
+    for f in n2:
+        for razon in f["decision"].motivos_escalada:
+            razones[razon] = razones.get(razon, 0) + 1
     for razon, cnt in razones.items():
         print(f"   - {razon}: {cnt} casos")
 
-    print("\nDetalle de mensajes escalados a Nivel 2:")
-    for r in escalados_a_n2:
-        motivo = " + ".join(r["razones"])
-        print(f"   * '{r['mensaje']}' -> Motivo: {motivo} (Candidato: {r['candidato_n1']})")
+    print("\nDetalle de clausulas escaladas a Nivel 2:")
+    for f in n2:
+        d = f["decision"]
+        motivo = " + ".join(d.motivos_escalada) if d.motivos_escalada else "-"
+        print(f"   * '{d.clausula}' -> Candidato: {d.intencion} | Motivo: {motivo}")
 
-    ahorro_total = (len(resueltos_n0) + len(resueltos_n1)) / total * 100
+    ahorro_total = (len(n0) + len(n1)) / total_clausulas * 100
     print("\n" + "=" * 95)
-    print(f"AHORRO TOTAL DE LLM (Nivel 0 + Nivel 1): {ahorro_total:.1f}% del trafico resuelto localmente")
-    print(f"TRAFICO QUE CONSUME LLM (Nivel 2):       {len(escalados_a_n2)/total*100:.1f}%")
+    print(f"AHORRO TOTAL DE LLM (Nivel 0 + Nivel 1): {ahorro_total:.1f}% de las clausulas resueltas localmente")
+    print(f"TRAFICO QUE CONSUME LLM (Nivel 2):       {len(n2)/total_clausulas*100:.1f}%")
     print("=" * 95)
 
 
+def main() -> None:
+    filas = medir_cascada()
+    imprimir_reporte(filas)
+
+
 if __name__ == "__main__":
-    simular_cascada()
+    main()
