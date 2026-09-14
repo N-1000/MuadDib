@@ -44,6 +44,19 @@ entity_catalog:
       keywords: ["nodo cristo rey", "nodo farallones"]
 
 intents:
+  - name: saludo_cortesia
+    match: exact
+    phrases:
+      - "hola"
+      - "buenas tardes"
+      - "gracias"
+      - "chao"
+      - "como estas"
+      - "todo bien por aca"
+    entity: []
+    action: ["reply_greeting"]
+    sensitive: false
+
   - name: consultar_nodo_mas_contaminado
     phrases:
       - "nodo con mayor contaminacion"
