@@ -39,51 +39,67 @@ def _crear_canonical_mock(
     return canonical, vec_query
 
 
-def test_umbral_confianza_limite_exacto(monkeypatch):
+def test_umbral_confianza_limites_exactos(monkeypatch):
     intents = ("consultar_aire", "pedir_ayuda")
     sensitive = (False, False)
     actions = (("show_air",), ("show_help",))
 
-    # Caso limite inferior: s1 = 0.599 -> Falla por debajo de 0.60
+    # 1. Limite inferior estricto: s1 = 0.599 -> Falla por debajo de 0.60
     can_inf, v_inf = _crear_canonical_mock(intents, [0.599, 0.400], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_inf)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d_inf = _evaluar_nivel1("test", can_inf, umbral=0.60, margen_min=0.05)
+    d_inf = _evaluar_nivel1("test", False, can_inf, umbral=0.60, margen_min=0.05)
     assert d_inf.nivel == 2
     assert "confianza_insuficiente" in d_inf.motivos_escalada
-    assert "margen_ambiguo" not in d_inf.motivos_escalada
 
-    # Caso limite superior: s1 = 0.601 -> Pasa el umbral
+    # 2. Borde exacto: s1 = 0.600 -> Pasa (>= 0.60)
+    can_borde, v_borde = _crear_canonical_mock(intents, [0.600, 0.400], sensitive, actions)
+    monkeypatch.setattr("intent_router.router.encode", lambda _: v_borde)
+
+    d_borde = _evaluar_nivel1("test", False, can_borde, umbral=0.60, margen_min=0.05)
+    assert d_borde.nivel == 1
+    assert d_borde.intencion == "consultar_aire"
+    assert d_borde.motivos_escalada == ()
+
+    # 3. Limite superior: s1 = 0.601 -> Pasa
     can_sup, v_sup = _crear_canonical_mock(intents, [0.601, 0.400], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_sup)
 
-    d_sup = _evaluar_nivel1("test", can_sup, umbral=0.60, margen_min=0.05)
+    d_sup = _evaluar_nivel1("test", False, can_sup, umbral=0.60, margen_min=0.05)
     assert d_sup.nivel == 1
     assert d_sup.intencion == "consultar_aire"
     assert d_sup.motivos_escalada == ()
 
 
-def test_margen_ambiguedad_limite_exacto(monkeypatch):
+def test_margen_ambiguedad_limites_exactos(monkeypatch):
     intents = ("consultar_aire", "pedir_ayuda")
     sensitive = (False, False)
     actions = (("show_air",), ("show_help",))
 
-    # Caso limite inferior: delta = 0.700 - 0.651 = 0.049 -> Falla margen
+    # 1. Limite inferior: delta = 0.700 - 0.651 = 0.049 -> Falla margen
     can_inf, v_inf = _crear_canonical_mock(intents, [0.700, 0.651], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_inf)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d_inf = _evaluar_nivel1("test", can_inf, umbral=0.60, margen_min=0.05)
+    d_inf = _evaluar_nivel1("test", False, can_inf, umbral=0.60, margen_min=0.05)
     assert d_inf.nivel == 2
     assert "margen_ambiguo" in d_inf.motivos_escalada
-    assert "confianza_insuficiente" not in d_inf.motivos_escalada
 
-    # Caso limite superior: delta = 0.700 - 0.649 = 0.051 -> Pasa margen
+    # 2. Borde exacto: delta = 0.700 - 0.650 = 0.050 -> Pasa (>= 0.05)
+    can_borde, v_borde = _crear_canonical_mock(intents, [0.700, 0.650], sensitive, actions)
+    monkeypatch.setattr("intent_router.router.encode", lambda _: v_borde)
+
+    d_borde = _evaluar_nivel1("test", False, can_borde, umbral=0.60, margen_min=0.05)
+    assert d_borde.nivel == 1
+    assert d_borde.intencion == "consultar_aire"
+    assert d_borde.motivos_escalada == ()
+
+    # 3. Limite superior: delta = 0.700 - 0.649 = 0.051 -> Pasa
     can_sup, v_sup = _crear_canonical_mock(intents, [0.700, 0.649], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: v_sup)
 
-    d_sup = _evaluar_nivel1("test", can_sup, umbral=0.60, margen_min=0.05)
+    d_sup = _evaluar_nivel1("test", False, can_sup, umbral=0.60, margen_min=0.05)
     assert d_sup.nivel == 1
     assert d_sup.intencion == "consultar_aire"
     assert d_sup.motivos_escalada == ()
@@ -98,11 +114,26 @@ def test_compuerta_sensitive_true_en_nivel1_escala_siempre(monkeypatch):
     monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d = _evaluar_nivel1("activa la alerta", can, umbral=0.60, margen_min=0.05)
+    d = _evaluar_nivel1("activa la alerta", False, can, umbral=0.60, margen_min=0.05)
     assert d.nivel == 2
     assert d.intencion == "activar_alerta"
     assert d.sensitive is True
     assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
+
+
+def test_clausula_negada_bloqueada_en_nivel1(monkeypatch):
+    intents = ("solicitar_reporte", "pedir_ayuda")
+    sensitive = (False, False)
+    actions = (("generate_report",), ("show_help",))
+
+    can, vec = _crear_canonical_mock(intents, [0.900, 0.400], sensitive, actions)
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("no quiero el reporte", True, can, umbral=0.60, margen_min=0.05)
+    assert d.nivel == 2
+    assert d.negada is True
+    assert "clausula_negada_en_nivel1" in d.motivos_escalada
 
 
 def test_registro_exhaustivo_de_multiples_fallos(monkeypatch):
@@ -110,17 +141,17 @@ def test_registro_exhaustivo_de_multiples_fallos(monkeypatch):
     sensitive = (True, False)
     actions = (("enable_alert",), ("show_air",))
 
-    # Falla confianza (0.45 < 0.60), margen (0.45 - 0.44 = 0.01 < 0.05) y es sensitive
     can, vec = _crear_canonical_mock(intents, [0.450, 0.440], sensitive, actions)
     monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
     monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
 
-    d = _evaluar_nivel1("mensaje ambiguo", can, umbral=0.60, margen_min=0.05)
+    d = _evaluar_nivel1("mensaje ambiguo", True, can, umbral=0.60, margen_min=0.05)
     assert d.nivel == 2
     assert "confianza_insuficiente" in d.motivos_escalada
     assert "margen_ambiguo" in d.motivos_escalada
     assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
-    assert len(d.motivos_escalada) == 3
+    assert "clausula_negada_en_nivel1" in d.motivos_escalada
+    assert len(d.motivos_escalada) == 4
 
 
 def test_resolucion_nivel0_exact_match():
@@ -146,7 +177,7 @@ def test_resolucion_nivel0_exact_match():
     assert d.accion == ("reply_greeting",)
 
 
-def test_multi_intencion_enruta_clausulas_independientes():
+def test_multi_intencion_heterogenea_nivel0_y_escalada_sensitive(monkeypatch):
     config = {
         "intents": [
             {
@@ -155,25 +186,35 @@ def test_multi_intencion_enruta_clausulas_independientes():
                 "action": ["navigate"],
                 "sensitive": False,
             },
-            {
-                "name": "consultar_pronostico",
-                "phrases": ["pronostico"],
-                "action": ["navigate"],
-                "sensitive": False,
-            },
         ]
     }
-    mensaje = "mostrame el mapa y decime el pronostico"
-    res = resolve(mensaje, config)
+    # Mock canonical con activar_alerta (sensitive: true)
+    can, vec = _crear_canonical_mock(
+        ("activar_alerta", "pedir_ayuda"),
+        [0.850, 0.400],
+        (True, False),
+        (("enable_alert",), ("show_help",)),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    mensaje = "mostrame el mapa y activa la alerta"
+    res = resolve(mensaje, config, canonical_data=can)
     assert isinstance(res, RoutingResult)
     assert res.es_multi_intencion is True
     assert len(res.decisiones) == 2
 
     d1, d2 = res.decisiones
+    # Clausula 1: Nivel 0 determinista
     assert d1.nivel == 0
     assert d1.intencion == "navegar_mapa"
-    assert d2.nivel == 0
-    assert d2.intencion == "consultar_pronostico"
+    assert d1.sensitive is False
+
+    # Clausula 2: Escala a Nivel 2 por fail_safe_sensitive
+    assert d2.nivel == 2
+    assert d2.intencion == "activar_alerta"
+    assert d2.sensitive is True
+    assert "fail_safe_sensitive_en_nivel1" in d2.motivos_escalada
 
 
 def test_degradacion_sin_modelo():

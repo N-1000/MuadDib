@@ -21,6 +21,7 @@ class Decision:
     confianza: float
     accion: tuple[str, ...]
     sensitive: bool
+    negada: bool = False
     motivos_escalada: tuple[str, ...] = field(default_factory=tuple)
     clausula: str = ""
     entidades: dict[str, Any] = field(default_factory=dict)
@@ -39,6 +40,7 @@ class RoutingResult:
 
 def _evaluar_nivel0(
     texto_clausula: str,
+    negada: bool,
     config_nivel0: dict[str, Any],
 ) -> Decision | None:
     """Evalua si una clausula cumple alguna regla determinista declarada en Nivel 0."""
@@ -60,6 +62,7 @@ def _evaluar_nivel0(
                     confianza=1.0,
                     accion=accion,
                     sensitive=sensitive,
+                    negada=negada,
                     clausula=texto_clausula,
                 )
         elif modo_match == "all":
@@ -70,6 +73,7 @@ def _evaluar_nivel0(
                     confianza=1.0,
                     accion=accion,
                     sensitive=sensitive,
+                    negada=negada,
                     clausula=texto_clausula,
                 )
         else:
@@ -80,6 +84,7 @@ def _evaluar_nivel0(
                     confianza=1.0,
                     accion=accion,
                     sensitive=sensitive,
+                    negada=negada,
                     clausula=texto_clausula,
                 )
 
@@ -88,6 +93,7 @@ def _evaluar_nivel0(
 
 def _evaluar_nivel1(
     texto_clausula: str,
+    negada: bool,
     canonical_data: CanonicalEmbeddings | None,
     umbral: float,
     margen_min: float,
@@ -103,6 +109,7 @@ def _evaluar_nivel1(
             confianza=0.0,
             accion=("escalate_to_llm",),
             sensitive=False,
+            negada=negada,
             motivos_escalada=tuple(motivos),
             clausula=texto_clausula,
         )
@@ -118,6 +125,7 @@ def _evaluar_nivel1(
             confianza=0.0,
             accion=("escalate_to_llm",),
             sensitive=False,
+            negada=negada,
             motivos_escalada=tuple(motivos),
             clausula=texto_clausula,
         )
@@ -135,6 +143,9 @@ def _evaluar_nivel1(
     if top1_sensitive:
         motivos.append("fail_safe_sensitive_en_nivel1")
 
+    if negada:
+        motivos.append("clausula_negada_en_nivel1")
+
     if motivos:
         return Decision(
             intencion=top1_name,
@@ -142,6 +153,7 @@ def _evaluar_nivel1(
             confianza=s1,
             accion=("escalate_to_llm",),
             sensitive=top1_sensitive,
+            negada=negada,
             motivos_escalada=tuple(motivos),
             clausula=texto_clausula,
         )
@@ -152,6 +164,7 @@ def _evaluar_nivel1(
         confianza=s1,
         accion=top1_action,
         sensitive=False,
+        negada=False,
         motivos_escalada=(),
         clausula=texto_clausula,
     )
@@ -168,17 +181,24 @@ def resolve(
     margen_min = float(routing_cfg.get("min_margin", DEFAULT_MIN_MARGIN))
 
     analisis = analizar(mensaje)
-    clausulas_texto = [c.texto for c in analisis.clausulas] if analisis.clausulas else [mensaje]
+    clausulas = analisis.clausulas if analisis.clausulas else ()
 
     decisiones: list[Decision] = []
 
-    for c_texto in clausulas_texto:
-        decision_n0 = _evaluar_nivel0(c_texto, config)
+    if not clausulas:
+        decision_n0 = _evaluar_nivel0(mensaje, False, config)
+        if decision_n0 is not None:
+            return RoutingResult(mensaje=mensaje, decisiones=(decision_n0,))
+        decision_n1 = _evaluar_nivel1(mensaje, False, canonical_data, umbral, margen_min)
+        return RoutingResult(mensaje=mensaje, decisiones=(decision_n1,))
+
+    for c in clausulas:
+        decision_n0 = _evaluar_nivel0(c.texto, c.negada, config)
         if decision_n0 is not None:
             decisiones.append(decision_n0)
             continue
 
-        decision_n1 = _evaluar_nivel1(c_texto, canonical_data, umbral, margen_min)
+        decision_n1 = _evaluar_nivel1(c.texto, c.negada, canonical_data, umbral, margen_min)
         decisiones.append(decision_n1)
 
     return RoutingResult(mensaje=mensaje, decisiones=tuple(decisiones))

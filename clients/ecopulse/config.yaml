@@ -1,0 +1,13 @@
+# config.yaml v1 — EcoPulse
+#
+# Parametros operativos y de comportamiento del agente y router.
+# No define intenciones (eso vive en canonical.yaml) ni reglas deterministas (rules_nivel0.yaml).
+
+client: ecopulse
+
+routing:
+  # Calibrado con el corpus de 67 mensajes reales de frases.txt
+  # Techo maximo medido de saludos y cortesias en Nivel 1 es 0.5782
+  threshold: 0.60
+  # Debajo de 0.05 los aciertos del modelo son empates tecnicos inestables
+  min_margin: 0.05
