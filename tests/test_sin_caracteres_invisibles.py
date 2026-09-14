@@ -27,7 +27,7 @@ def _caracteres_prohibidos(ruta: Path) -> list[tuple[int, str, str]]:
 
 
 def test_sin_caracteres_invisibles_literales_en_el_repo():
-    # Una secuencia de escape ("‍") es texto ASCII plano al leer el
+    # Una secuencia de escape Unicode es texto ASCII plano al leer el
     # archivo: solo un caracter Mn/Cf/Co real y embebido dispara esto,
     # nunca su representacion como escape. Ver CLAUDE.md, Caracteres no
     # imprimibles.
