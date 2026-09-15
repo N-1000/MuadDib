@@ -22,6 +22,14 @@ class MotorRouter:
         self._config = config
         self._canonical_data = canonical_data
 
+    @property
+    def config(self) -> dict:
+        return self._config
+
+    @property
+    def canonical_data(self):
+        return self._canonical_data
+
     def procesar_mensaje(self, mensaje: str) -> RoutingResult:
         """Resuelve un mensaje y registra cada clausula resultante en metrics.py."""
         inicio = time.perf_counter()
