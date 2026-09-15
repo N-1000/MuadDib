@@ -5,6 +5,14 @@ centroide no separa basura de mensajes legitimos: 'dime el pronostico' puntua ma
 la basura mas parecida. No hay compuerta que arregle eso, asi que el sistema sigue dependiendo
 de que ningun texto ajeno cruce el umbral de Nivel 1. Este test vigila esa dependencia -- no la
 resuelve -- para que un canonical.yaml mas denso no la rompa en silencio.
+
+Margen medido al escribir este test: 0.0274 (umbral 0.60, techo de basura 0.5726 en
+'dale pues' contra cancelar_alerta). Se espera que ese margen se achique a medida que
+canonical.yaml se densifica -- centroides con mas frases tienden a cubrir mas espacio
+semantico, incluido el de texto generico. Si este test falla, la lectura correcta no es
+"algo se rompio": es "el margen se agoto y routing.threshold (o las frases del intent que
+gano) necesitan recalibrarse". Bajar el umbral sin mirar por que goles nuevos aparecen
+en la basura resuelve el sintoma, no la causa.
 """
 
 import pytest
@@ -42,7 +50,9 @@ def test_texto_fuera_de_dominio_no_supera_el_umbral(motor, texto):
     ranking = rank_intents(vec, motor.canonical_data)
     top1_nombre, top1_score = ranking[0][0], ranking[0][1]
     assert top1_score < umbral, (
-        f"'{texto}' supera el umbral contra '{top1_nombre}' "
-        f"({top1_score:.4f} >= {umbral}): el margen que hoy evita quemar LLM en "
-        f"texto ajeno se rompio -- revisar canonical.yaml o routing.threshold"
+        f"'{texto}' supera el umbral contra '{top1_nombre}' ({top1_score:.4f} >= {umbral}). "
+        f"Esto no es un bug en el codigo: es el margen entre routing.threshold y el techo de "
+        f"basura agotandose (era 0.0274 al escribir este test). Recalibrar routing.threshold "
+        f"o revisar por que '{top1_nombre}' se volvio mas atractivo para texto generico, no "
+        f"bajar el umbral sin mirar la causa."
     )
