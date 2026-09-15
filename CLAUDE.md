@@ -12,6 +12,15 @@ Construyendo `intent_router/` como paquete standalone: la cascada de 3 niveles (
 - Honestidad técnica sobre validación: si algo tiene un riesgo o una alternativa mejor, decilo con su razón.
 - Código funcional de punta a punta. Si algo queda a medias, decirlo y listar qué falta.
 
+## Disciplina de medición y verificación
+
+Estos cuatro hábitos produjeron todos los hallazgos reales del desarrollo de Fase 1 (el bug de routing tapado por un default, el keyword-hijack de Nivel 0, el bug de `compare_zones` sin parámetros, el intent de descarte que no separaba nada). No son estilo, son lo que evitó construir sobre una medición equivocada cada una de esas veces.
+
+1. **Fijar el criterio de decisión antes de medir, no después.** Decidir qué resultado cuenta como "funciona" o "no funciona" antes de correr el experimento. Si el criterio se elige mirando el resultado, deja de ser un criterio.
+2. **Un test no protege nada hasta que se lo vio fallar.** Verificar cada compuerta/gate rompiendo o comentando el código que protege y confirmando que el test correspondiente falla, antes de darlo por bueno. Un test que nunca falló es una suposición con sintaxis de test.
+3. **Convertir cada excepción descubierta en un mecanismo declarativo, no en un caso especial de código.** Cuando aparece una regla nueva (`sensitive: bool`, `entity_cardinality`, match exacto en Nivel 0), el arreglo es un campo en la config + una compuerta genérica en el core que lo lee — nunca un `if` puntual para ese caso. Ver regla de arquitectura 4.
+4. **Un número que suena bien es sospechoso hasta que se audita el instrumento que lo produjo.** Un ahorro/precisión/métrica que parece razonable puede venir de una reimplementación paralela, una lista hardcodeada, o una generalización de un solo ejemplo — no de medir el sistema real. Antes de razonar sobre un número, confirmar qué lo calculó.
+
 ## Comentarios
 
 Esta sección aplica a código de producción (`src/`). En tests el criterio es otro: ver más abajo.
