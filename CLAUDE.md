@@ -21,6 +21,14 @@ Estos cuatro hábitos produjeron todos los hallazgos reales del desarrollo de Fa
 3. **Convertir cada excepción descubierta en un mecanismo declarativo, no en un caso especial de código.** Cuando aparece una regla nueva (`sensitive: bool`, `entity_cardinality`, match exacto en Nivel 0), el arreglo es un campo en la config + una compuerta genérica en el core que lo lee — nunca un `if` puntual para ese caso. Ver regla de arquitectura 4.
 4. **Un número que suena bien es sospechoso hasta que se audita el instrumento que lo produjo.** Un ahorro/precisión/métrica que parece razonable puede venir de una reimplementación paralela, una lista hardcodeada, o una generalización de un solo ejemplo — no de medir el sistema real. Antes de razonar sobre un número, confirmar qué lo calculó.
 
+## Flujo de trabajo con git
+
+`master` está protegido por un ruleset de GitHub que exige el check de CI (test) en verde antes de mergear, aplica incluso a admins, y es el motivo de todo el CI que se armó: que ningún cambio entre sin que los 232 tests hayan corrido.
+
+- Todo el trabajo va en `dev`. Commitear y pushear ahí (`git push origin dev`) las veces que haga falta.
+- Nunca pushear a `master`. `git push origin master` va a ser rechazado (`GH013: Repository rule violations found`) — es el comportamiento esperado, no un problema a resolver con `--force`, cambiando la config del repo, o pidiendo bypass. El merge de `dev` a `master` lo hace el usuario desde la web de GitHub, con PR y el check en verde.
+- Antes de empezar cualquier tanda, verificar la rama actual con `git branch --show-current`. Si quedó algún commit en `master` local sin pushear, moverlo a `dev` y dejar el `master` local igual al remoto: `git checkout master && git reset --hard origin/master`.
+
 ## Comentarios
 
 Esta sección aplica a código de producción (`src/`). En tests el criterio es otro: ver más abajo.
