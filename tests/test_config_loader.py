@@ -163,3 +163,53 @@ def test_entity_catalog_value_duplicado_revienta(tmp_path):
     )
     with pytest.raises(ConfigError, match="duplicado"):
         cargar_config(config_path, rules_path, entities_path)
+
+
+def test_entity_defaults_ausente_devuelve_dict_vacio(tmp_path):
+    config_path, rules_path, entities_path = _config_valido(tmp_path)
+    config = cargar_config(config_path, rules_path, entities_path)
+    assert config["entity_defaults"] == {}
+
+
+def test_entity_defaults_valido_se_propaga(tmp_path):
+    config_path, rules_path, entities_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "entity_defaults:\n  region: pance\n",
+    )
+    config = cargar_config(config_path, rules_path, entities_path)
+    assert config["entity_defaults"] == {"region": "pance"}
+
+
+def test_entity_defaults_no_es_mapping_revienta(tmp_path):
+    config_path, rules_path, entities_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "entity_defaults: [\"region\"]\n",
+    )
+    with pytest.raises(ConfigError, match="entity_defaults"):
+        cargar_config(config_path, rules_path, entities_path)
+
+
+def test_entity_defaults_tipo_inexistente_en_catalogo_revienta(tmp_path):
+    config_path, rules_path, entities_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "entity_defaults:\n  periodo: 24h\n",
+    )
+    with pytest.raises(ConfigError, match="periodo"):
+        cargar_config(config_path, rules_path, entities_path)
+
+
+def test_entity_defaults_value_inexistente_en_catalogo_revienta(tmp_path):
+    config_path, rules_path, entities_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "entity_defaults:\n  region: siloe\n",
+    )
+    with pytest.raises(ConfigError, match="region"):
+        cargar_config(config_path, rules_path, entities_path)

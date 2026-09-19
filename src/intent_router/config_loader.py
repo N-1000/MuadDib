@@ -17,11 +17,13 @@ def cargar_config(config_path: Path, rules_path: Path, entities_path: Path) -> d
     config_data = _leer_yaml(config_path)
     rules_data = _leer_yaml(rules_path)
     entities_data = _leer_yaml(entities_path)
+    entity_catalog = _validar_entity_catalog(entities_data, entities_path)
     return {
         "client": _validar_client(config_data, config_path),
         "routing": _validar_routing(config_data, config_path),
         "intents": _validar_intents(rules_data, rules_path),
-        "entity_catalog": _validar_entity_catalog(entities_data, entities_path),
+        "entity_catalog": entity_catalog,
+        "entity_defaults": _validar_entity_defaults(config_data, entity_catalog, config_path, entities_path),
     }
 
 
@@ -120,3 +122,33 @@ def _validar_entrada_entidad(tipo: str, entrada: Any, path: Path) -> str:
     if not isinstance(keywords, list) or not keywords or not all(isinstance(k, str) and k for k in keywords):
         raise ConfigError(f"{path}: entity_catalog.{tipo}.{valor} necesita 'keywords' como lista no vacia de strings")
     return valor
+
+
+def _validar_entity_defaults(
+    config_data: dict[str, Any],
+    entity_catalog: dict[str, list[dict[str, Any]]],
+    config_path: Path,
+    entities_path: Path,
+) -> dict[str, str]:
+    """Exige que cada default declarado apunte a un tipo y value que existan en entity_catalog."""
+    defaults = config_data.get("entity_defaults", {})
+    if not isinstance(defaults, dict):
+        raise ConfigError(f"{config_path}: 'entity_defaults' debe ser un mapping de tipo -> value")
+
+    resultado: dict[str, str] = {}
+    for tipo, valor in defaults.items():
+        if not isinstance(valor, str) or not valor:
+            raise ConfigError(f"{config_path}: entity_defaults.{tipo} debe ser un string no vacio")
+        if tipo not in entity_catalog:
+            raise ConfigError(
+                f"{config_path}: entity_defaults.{tipo} declara un tipo que no existe en "
+                f"entity_catalog ({entities_path})"
+            )
+        valores_validos = {entrada["value"] for entrada in entity_catalog[tipo]}
+        if valor not in valores_validos:
+            raise ConfigError(
+                f"{config_path}: entity_defaults.{tipo}='{valor}' no es un value declarado en "
+                f"entity_catalog.{tipo} ({entities_path})"
+            )
+        resultado[tipo] = valor
+    return resultado

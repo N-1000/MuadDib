@@ -185,6 +185,7 @@ def test_sensitive_con_accion_vacia_no_escala_resuelve_en_nivel1(monkeypatch):
     assert d.intencion == "politica_privacidad"
     assert d.accion == ()
     assert d.motivos_escalada == ()
+    assert d.sensitive is True, "sensitive debe seguir diciendo la verdad aunque no gatee sin accion"
 
 
 def test_sensitive_con_accion_no_vacia_sigue_escalando(monkeypatch):
@@ -200,6 +201,78 @@ def test_sensitive_con_accion_no_vacia_sigue_escalando(monkeypatch):
     assert d.intencion is None
     assert d.candidato_descartado == "activar_alerta"
     assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
+
+
+_CONFIG_PERIODO_CON_DEFAULT = {
+    "entity_catalog": {
+        "periodo": [
+            {"value": "24h", "keywords": ["ultimas 24 horas"]},
+            {"value": "mensual", "keywords": ["mensual"]},
+        ],
+    },
+    "entity_defaults": {"periodo": "24h"},
+}
+
+
+def test_default_de_entidad_se_aplica_si_falta_en_el_mensaje(monkeypatch):
+    """show_trend no puede despachar sin saber que periodo -- si el usuario no lo dijo, se asume 24h."""
+    can, vec = _crear_canonical_mock(
+        ("consultar_tendencia_calidad_aire",),
+        [0.900],
+        (False,),
+        (("show_trend",),),
+        entity_types=(("periodo",),),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1(
+        "muestrame la tendencia", False, can, umbral=0.60, margen_min=0.05, config=_CONFIG_PERIODO_CON_DEFAULT
+    )
+    assert d.nivel == 1
+    assert d.entidades == {"periodo": ["24h"]}
+    assert d.entidades_default == ("periodo",)
+
+
+def test_default_de_entidad_no_pisa_lo_que_dijo_el_usuario(monkeypatch):
+    """Si el usuario especifico el periodo, el default no se aplica -- entidades_default queda vacio."""
+    can, vec = _crear_canonical_mock(
+        ("consultar_tendencia_calidad_aire",),
+        [0.900],
+        (False,),
+        (("show_trend",),),
+        entity_types=(("periodo",),),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1(
+        "dame el historico mensual", False, can, umbral=0.60, margen_min=0.05, config=_CONFIG_PERIODO_CON_DEFAULT
+    )
+    assert d.nivel == 1
+    assert d.entidades == {"periodo": ["mensual"]}
+    assert d.entidades_default == ()
+
+
+def test_default_de_entidad_se_aplica_en_nivel0():
+    config = {
+        "intents": [
+            {
+                "name": "consultar_algo",
+                "phrases": ["dame la tendencia"],
+                "action": ["show_trend"],
+                "entity": ["periodo"],
+                "sensitive": False,
+            }
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
+        **_CONFIG_PERIODO_CON_DEFAULT,
+    }
+    res = resolve("dame la tendencia", config)
+    d = res.decisiones[0]
+    assert d.nivel == 0
+    assert d.entidades == {"periodo": ["24h"]}
+    assert d.entidades_default == ("periodo",)
 
 
 _ENTITY_CATALOG_REGION = {

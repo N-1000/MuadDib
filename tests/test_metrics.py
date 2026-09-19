@@ -65,7 +65,25 @@ def test_log_decision_emite_registro_estructurado(caplog):
     assert registro.candidato_descartado is None
     assert registro.confianza == 0.9
     assert registro.entidades == {"region": "pance"}
+    assert registro.entidades_default == ()
     assert registro.latencia_ms == 42.5
+
+
+def test_log_decision_registra_entidades_default(caplog):
+    decision_con_default = Decision(
+        intencion="consultar_tendencia_calidad_aire",
+        nivel=1,
+        confianza=0.8,
+        accion=("show_trend",),
+        sensitive=False,
+        entidades={"periodo": ["24h"]},
+        entidades_default=("periodo",),
+    )
+    with caplog.at_level(logging.INFO, logger="intent_router.metrics"):
+        log_decision(EventoDecision(decision=decision_con_default, latencia_ms=5.0))
+
+    registro = caplog.records[0]
+    assert registro.entidades_default == ("periodo",)
 
 
 def test_log_decision_registra_candidato_descartado_en_escalada(caplog):

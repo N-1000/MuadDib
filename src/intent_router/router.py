@@ -24,6 +24,7 @@ class Decision:
     clausula: str = ""
     entidades: dict[str, Any] = field(default_factory=dict)
     candidato_descartado: str | None = None
+    entidades_default: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,21 @@ def _evaluar_entidades(
         cumple = all(len(entidades.get(tipo, [])) >= 2 for tipo in entity_types)
         return entidades, cumple
     return entidades, True
+
+
+def _aplicar_defaults_entidades(
+    entidades: dict[str, list[str]],
+    entity_types: tuple[str, ...],
+    defaults: dict[str, str],
+) -> tuple[dict[str, list[str]], tuple[str, ...]]:
+    """Rellena con el default declarado los tipos de entidad que la intencion necesita y el mensaje no proveyo."""
+    resultado = dict(entidades)
+    aplicados: list[str] = []
+    for tipo in entity_types:
+        if not resultado.get(tipo) and tipo in defaults:
+            resultado[tipo] = [defaults[tipo]]
+            aplicados.append(tipo)
+    return resultado, tuple(aplicados)
 
 
 def _evaluar_nivel0(
@@ -96,9 +112,10 @@ def _construir_decision_nivel0(
             candidato_descartado=nombre,
         )
 
+    entity_types = tuple(intent.get("entity", []))
     entidades, cardinalidad_ok = _evaluar_entidades(
         texto_clausula,
-        tuple(intent.get("entity", [])),
+        entity_types,
         intent.get("entity_cardinality"),
         config,
     )
@@ -116,6 +133,9 @@ def _construir_decision_nivel0(
             candidato_descartado=nombre,
         )
 
+    entidades, defaults_aplicados = _aplicar_defaults_entidades(
+        entidades, entity_types, config.get("entity_defaults", {})
+    )
     return Decision(
         intencion=nombre,
         nivel=0,
@@ -125,6 +145,7 @@ def _construir_decision_nivel0(
         negada=False,
         clausula=texto_clausula,
         entidades=entidades,
+        entidades_default=defaults_aplicados,
     )
 
 
@@ -203,16 +224,20 @@ def _evaluar_nivel1(
             candidato_descartado=top1_name,
         )
 
+    entidades, defaults_aplicados = _aplicar_defaults_entidades(
+        entidades, top1_entity_types, config.get("entity_defaults", {})
+    )
     return Decision(
         intencion=top1_name,
         nivel=1,
         confianza=s1,
         accion=top1_action,
-        sensitive=False,
+        sensitive=top1_sensitive,
         negada=False,
         motivos_escalada=(),
         clausula=texto_clausula,
         entidades=entidades,
+        entidades_default=defaults_aplicados,
     )
 
 

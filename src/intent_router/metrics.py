@@ -36,6 +36,7 @@ def log_decision(evento: EventoDecision) -> None:
             "candidato_descartado": d.candidato_descartado,
             "confianza": d.confianza,
             "entidades": d.entidades,
+            "entidades_default": d.entidades_default,
             "latencia_ms": evento.latencia_ms,
         },
     )
