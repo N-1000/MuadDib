@@ -116,6 +116,52 @@ def test_precompute_canonical_sin_intents_levanta_error(modelo_cargado):
         precompute_canonical({"client": "test"}, modelo=modelo_cargado)
 
 
+def test_precompute_canonical_action_vacia_es_valida(modelo_cargado):
+    config_prueba = {
+        "intents": [
+            {
+                "name": "politica_privacidad",
+                "action": [],
+                "sensitive": True,
+                "phrases": ["cual es la politica de privacidad"],
+            },
+        ],
+    }
+    canonical = precompute_canonical(config_prueba, modelo=modelo_cargado)
+    assert canonical.actions == ((),)
+    assert canonical.sensitive_flags == (True,)
+
+
+def test_precompute_canonical_sensitive_no_bool_levanta_error(modelo_cargado):
+    config_prueba = {
+        "intents": [
+            {"name": "x", "action": [], "sensitive": "false", "phrases": ["hola"]},
+        ],
+    }
+    with pytest.raises(ValueError, match="sensitive"):
+        precompute_canonical(config_prueba, modelo=modelo_cargado)
+
+
+def test_precompute_canonical_action_no_lista_levanta_error(modelo_cargado):
+    config_prueba = {
+        "intents": [
+            {"name": "x", "action": "enable_alert", "sensitive": False, "phrases": ["hola"]},
+        ],
+    }
+    with pytest.raises(ValueError, match="action"):
+        precompute_canonical(config_prueba, modelo=modelo_cargado)
+
+
+def test_precompute_canonical_action_con_elemento_no_string_levanta_error(modelo_cargado):
+    config_prueba = {
+        "intents": [
+            {"name": "x", "action": [123], "sensitive": False, "phrases": ["hola"]},
+        ],
+    }
+    with pytest.raises(ValueError, match="action"):
+        precompute_canonical(config_prueba, modelo=modelo_cargado)
+
+
 def test_encode_sin_modelo_levanta_runtime_error(monkeypatch):
     monkeypatch.setattr("intent_router.embeddings._MODELO_GLOBAL", None)
     with pytest.raises(RuntimeError, match="no esta disponible"):

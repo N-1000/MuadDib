@@ -180,7 +180,7 @@ def _evaluar_nivel1(
     if len(ranking) > 1 and delta < margen_min:
         motivos.append("margen_ambiguo")
 
-    if top1_sensitive:
+    if top1_sensitive and top1_action:
         motivos.append("fail_safe_sensitive_en_nivel1")
 
     if negada:

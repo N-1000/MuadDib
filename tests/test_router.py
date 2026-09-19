@@ -172,6 +172,36 @@ def test_resolucion_nivel1_con_accion_vacia_devuelve_intencion(monkeypatch):
     assert d.accion == ()
 
 
+def test_sensitive_con_accion_vacia_no_escala_resuelve_en_nivel1(monkeypatch):
+    """Sin accion que despachar no hay riesgo que gatear: sensitive true + action [] resuelve igual."""
+    can, vec = _crear_canonical_mock(
+        ("politica_privacidad",), [0.900], (True,), ((),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("cual es la politica de privacidad", False, can, umbral=0.60, margen_min=0.05, config={})
+    assert d.nivel == 1
+    assert d.intencion == "politica_privacidad"
+    assert d.accion == ()
+    assert d.motivos_escalada == ()
+
+
+def test_sensitive_con_accion_no_vacia_sigue_escalando(monkeypatch):
+    """La compuerta sigue exigiendose igual que hoy en cuanto hay una accion real que gatear."""
+    can, vec = _crear_canonical_mock(
+        ("activar_alerta",), [0.900], (True,), (("enable_alert",),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("activa la alerta", False, can, umbral=0.60, margen_min=0.05, config={})
+    assert d.nivel == 2
+    assert d.intencion is None
+    assert d.candidato_descartado == "activar_alerta"
+    assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
+
+
 _ENTITY_CATALOG_REGION = {
     "entity_catalog": {
         "region": [
