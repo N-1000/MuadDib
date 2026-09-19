@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 import numpy as np
 import yaml
+from sentence_transformers import SentenceTransformer
 from intent_router.embeddings import load_model, MODEL_DEFAULT as MODEL_NAME
 from intent_router.normalizer import normalize
 
