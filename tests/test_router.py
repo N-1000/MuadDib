@@ -158,6 +158,20 @@ def test_registro_exhaustivo_de_multiples_fallos(monkeypatch):
     assert len(d.motivos_escalada) == 4
 
 
+def test_resolucion_nivel1_con_accion_vacia_devuelve_intencion(monkeypatch):
+    """El anfitrion necesita el name del intent para mapear intencion -> texto, incluso sin accion que despachar."""
+    can, vec = _crear_canonical_mock(
+        ("consultar_pronostico",), [0.900], (False,), ((),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("como va a estar el aire manana", False, can, umbral=0.60, margen_min=0.05, config={})
+    assert d.nivel == 1
+    assert d.intencion == "consultar_pronostico"
+    assert d.accion == ()
+
+
 _ENTITY_CATALOG_REGION = {
     "entity_catalog": {
         "region": [
