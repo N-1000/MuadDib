@@ -11,3 +11,11 @@ routing:
   threshold: 0.60
   # Debajo de 0.05 los aciertos del modelo son empates tecnicos inestables
   min_margin: 0.05
+
+# Default explicito por tipo de entidad: si el mensaje no menciona el
+# periodo, el router lo asume en vez de despachar show_trend sin saber si
+# es 24h o mensual. Escrito aca, no adivinado por el anfitrion -- y queda
+# registrado en Decision.entidades_default cuando se aplica, para
+# distinguir "el usuario pidio mensual" de "se asumio 24h".
+entity_defaults:
+  periodo: "24h"

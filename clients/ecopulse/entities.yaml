@@ -29,10 +29,24 @@
 # Arreglo pendiente: agregar el tipo "sensor" al catalogo y declarar
 # entity/entity_cardinality en esos dos intents para que la compuerta
 # los alcance.
+#
+# "periodo" (2026-09-19, canonical.yaml v2 / consultar_tendencia_calidad_aire):
+# keywords elegidas para NO coincidir con vocabulario de otras intenciones.
+# "hoy"/"de hoy"/"en el dia" quedaron descartadas a proposito -- aparecen
+# literalmente en frases de consultar_calidad_aire (ej. "mostrame la
+# calidad del aire de hoy"), asi que como marcador temporal no discriminan
+# nada: extraerian periodo="24h" de cualquier mensaje que mencione "hoy",
+# sin relacion con si el usuario pidio una tendencia. Verificado con grep
+# contra canonical.yaml + rules_nivel0.yaml antes de elegir estas.
 
 client: ecopulse
 
 entity_catalog:
+  periodo:
+    - value: "24h"
+      keywords: ["ultimas 24 horas", "24 horas", "hora por hora"]
+    - value: mensual
+      keywords: ["mensual", "historico mensual", "mes a mes", "ultimos meses", "este año"]
   region:
     - value: pance
       keywords: ["pance"]
