@@ -5,9 +5,10 @@ from intent_router.config_loader import cargar_config
 from intent_router.embeddings import MODEL_DEFAULT, load_model, precompute_canonical
 from intent_router.router import Decision, _evaluar_nivel1, resolve
 
-CONFIG_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "config.yaml"
-RULES_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "rules_nivel0.yaml"
-ENTITIES_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "entities.yaml"
+_FIXTURE_DIR = Path(__file__).resolve().parent / "tests" / "fixtures" / "ecopulse"
+CONFIG_PATH = _FIXTURE_DIR / "config.yaml"
+RULES_PATH = _FIXTURE_DIR / "rules_nivel0.yaml"
+ENTITIES_PATH = _FIXTURE_DIR / "entities.yaml"
 
 
 def cargar_canonical_embeddings(modelo):
