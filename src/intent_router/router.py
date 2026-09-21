@@ -25,6 +25,14 @@ class Decision:
     entidades: dict[str, Any] = field(default_factory=dict)
     candidato_descartado: str | None = None
     entidades_default: tuple[str, ...] = field(default_factory=tuple)
+    respuesta_texto: str | None = None
+    respuesta_fundamentada: bool = False
+    herramientas_llamadas: tuple[str, ...] = field(default_factory=tuple)
+    herramientas_fallidas: tuple[str, ...] = field(default_factory=tuple)
+    herramienta_pendiente: dict[str, Any] | None = None
+    tokens_entrada: int = 0
+    tokens_salida: int = 0
+    latencia_llm_ms: float = 0.0
 
 
 @dataclass(frozen=True)

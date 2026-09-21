@@ -471,7 +471,10 @@ def test_resolve_usa_threshold_de_config_yaml_no_el_viejo_default(tmp_path, monk
     config_path = tmp_path / "config.yaml"
     rules_path = tmp_path / "rules_nivel0.yaml"
     config_path.write_text(
-        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.05\n",
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.05\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
         encoding="utf-8",
     )
     rules_path.write_text(

@@ -8,12 +8,15 @@ dependencies = [
     "pyyaml>=6.0.3",
     "rapidfuzz>=3.9",
     "sentence-transformers>=6.0.1",
+    "anthropic>=0.40.0",
+    "jsonschema>=4.23.0",
 ]
 
 [dependency-groups]
 dev = [
     "hypothesis>=6.168.0",
     "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
 ]
 
 [build-system]
@@ -25,3 +28,4 @@ packages = ["src/intent_router"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"

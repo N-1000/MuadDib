@@ -15,7 +15,10 @@ def _config_valido(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
     canonical_path = tmp_path / "canonical.yaml"
     _escribir(
         config_path,
-        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n",
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
     )
     _escribir(
         rules_path,
@@ -155,6 +158,128 @@ def test_consistencia_accion_intent_solo_en_canonical_no_revienta(tmp_path):
     assert config["intents"][0]["name"] == "saludo"
 
 
+def test_nivel2_ausente_revienta(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(config_path, "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n")
+    with pytest.raises(ConfigError, match="nivel2"):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_nivel2_valido_se_propaga(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
+    assert config["nivel2"] == {
+        "timeout_s": 8.0,
+        "max_vueltas_tool_use": 4,
+        "max_tokens_respuesta": 1024,
+        "max_caracteres_resultado_herramienta": 4000,
+        "modelo": "claude-sonnet-5",
+    }
+
+
+@pytest.mark.parametrize("campo", ["timeout_s", "max_vueltas_tool_use", "max_tokens_respuesta", "max_caracteres_resultado_herramienta"])
+def test_nivel2_campo_numerico_faltante_revienta(tmp_path, campo):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    campos = {
+        "timeout_s": "timeout_s: 8.0",
+        "max_vueltas_tool_use": "max_vueltas_tool_use: 4",
+        "max_tokens_respuesta": "max_tokens_respuesta: 1024",
+        "max_caracteres_resultado_herramienta": "max_caracteres_resultado_herramienta: 4000",
+    }
+    del campos[campo]
+    cuerpo = "\n  ".join(campos.values())
+    _escribir(
+        config_path,
+        f"client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        f"nivel2:\n  {cuerpo}\n  modelo: claude-sonnet-5\n",
+    )
+    with pytest.raises(ConfigError, match=campo):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_nivel2_campo_numerico_como_string_revienta(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        'nivel2:\n  timeout_s: "8.0"\n  max_vueltas_tool_use: 4\n'
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
+    )
+    with pytest.raises(ConfigError, match="numerico"):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_nivel2_campo_numerico_booleano_revienta(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "nivel2:\n  timeout_s: true\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
+    )
+    with pytest.raises(ConfigError, match="numerico"):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_nivel2_campo_numerico_cero_revienta(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "nivel2:\n  timeout_s: 0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
+    )
+    with pytest.raises(ConfigError, match="mayor a cero"):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_nivel2_modelo_ausente_revienta(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n",
+    )
+    with pytest.raises(ConfigError, match="modelo"):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_nivel2_modelo_vacio_revienta(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(
+        config_path,
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        '  modelo: ""\n',
+    )
+    with pytest.raises(ConfigError, match="modelo"):
+        cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+
+def test_acciones_declaradas_es_union_de_rules_y_canonical(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(canonical_path, "client: test\nintents:\n  - name: otro\n    action: [\"show_otro\"]\n")
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
+    assert config["acciones_declaradas"] == frozenset({"reply", "show_otro"})
+
+
+def test_acciones_sensibles_solo_incluye_intents_sensitive_true(tmp_path):
+    config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
+    _escribir(
+        rules_path,
+        "client: test\nintents:\n"
+        "  - name: saludo\n    phrases: [\"hola\"]\n    action: [\"reply\"]\n    sensitive: false\n"
+        "  - name: alerta\n    phrases: [\"alerta\"]\n    action: [\"send_alert\"]\n    sensitive: true\n",
+    )
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
+    assert config["acciones_sensibles"] == frozenset({"send_alert"})
+
+
 def test_yaml_raiz_no_es_mapping_revienta(tmp_path):
     config_path, rules_path, entities_path, canonical_path = _config_valido(tmp_path)
     _escribir(config_path, "- item1\n- item2\n")
@@ -213,7 +338,10 @@ def test_entity_defaults_valido_se_propaga(tmp_path):
     _escribir(
         config_path,
         "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.10\n"
-        "entity_defaults:\n  region: pance\n",
+        "entity_defaults:\n  region: pance\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
     )
     config = cargar_config(config_path, rules_path, entities_path, canonical_path)
     assert config["entity_defaults"] == {"region": "pance"}

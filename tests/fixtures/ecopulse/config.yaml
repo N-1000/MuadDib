@@ -19,3 +19,13 @@ routing:
 # distinguir "el usuario pidio mensual" de "se asumio 24h".
 entity_defaults:
   periodo: "24h"
+
+# Limites y modelo del motor de Nivel 2 (escalada con tool-use). Sin
+# defaults implicitos, mismo criterio que routing: si falta uno, el
+# servicio no arranca.
+nivel2:
+  timeout_s: 8.0
+  max_vueltas_tool_use: 4
+  max_tokens_respuesta: 1024
+  max_caracteres_resultado_herramienta: 4000
+  modelo: "claude-sonnet-5"

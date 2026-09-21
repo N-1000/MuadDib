@@ -21,12 +21,16 @@ def cargar_config(config_path: Path, rules_path: Path, entities_path: Path, cano
     entity_catalog = _validar_entity_catalog(entities_data, entities_path)
     intents = _validar_intents(rules_data, rules_path)
     _validar_consistencia_accion(intents, canonical_data, rules_path, canonical_path)
+    acciones_declaradas, acciones_sensibles = _derivar_acciones(intents, canonical_data.get("intents", []))
     return {
         "client": _validar_client(config_data, config_path),
         "routing": _validar_routing(config_data, config_path),
         "intents": intents,
         "entity_catalog": entity_catalog,
         "entity_defaults": _validar_entity_defaults(config_data, entity_catalog, config_path, entities_path),
+        "nivel2": _validar_nivel2(config_data, config_path),
+        "acciones_declaradas": acciones_declaradas,
+        "acciones_sensibles": acciones_sensibles,
     }
 
 
@@ -150,6 +154,61 @@ def _validar_consistencia_accion(
                 f"'{nombre}' declara action distinta en {rules_path} ({list(accion_rules)}) "
                 f"y en {canonical_path} ({list(accion_canonical)})"
             )
+
+
+def _derivar_acciones(
+    rules_intents: list[dict[str, Any]],
+    canonical_intents: list[dict[str, Any]],
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Deriva el set de todas las acciones declaradas y el subset que pertenece a un intent sensitive:true."""
+    declaradas: set[str] = set()
+    sensibles: set[str] = set()
+    for intent in (*rules_intents, *canonical_intents):
+        if not isinstance(intent, dict):
+            continue
+        acciones = intent.get("action", [])
+        if not isinstance(acciones, list):
+            continue
+        declaradas.update(acciones)
+        if intent.get("sensitive") is True:
+            sensibles.update(acciones)
+    return frozenset(declaradas), frozenset(sensibles)
+
+
+def _validar_nivel2(data: dict[str, Any], path: Path) -> dict[str, Any]:
+    """Exige la seccion 'nivel2' completa, sin defaults implicitos."""
+    nivel2 = data.get("nivel2")
+    if not isinstance(nivel2, dict):
+        raise ConfigError(f"{path}: falta la seccion 'nivel2' obligatoria")
+    return {
+        "timeout_s": _validar_positivo(nivel2, "timeout_s", path),
+        "max_vueltas_tool_use": int(_validar_positivo(nivel2, "max_vueltas_tool_use", path)),
+        "max_tokens_respuesta": int(_validar_positivo(nivel2, "max_tokens_respuesta", path)),
+        "max_caracteres_resultado_herramienta": int(
+            _validar_positivo(nivel2, "max_caracteres_resultado_herramienta", path)
+        ),
+        "modelo": _validar_modelo_nivel2(nivel2, path),
+    }
+
+
+def _validar_positivo(nivel2: dict[str, Any], campo: str, path: Path) -> float:
+    """Exige que nivel2[campo] sea numerico y mayor a cero."""
+    if campo not in nivel2:
+        raise ConfigError(f"{path}: falta 'nivel2.{campo}' obligatorio")
+    valor = nivel2[campo]
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        raise ConfigError(f"{path}: 'nivel2.{campo}' debe ser numerico, recibido {valor!r}")
+    if valor <= 0:
+        raise ConfigError(f"{path}: 'nivel2.{campo}' debe ser mayor a cero: {valor}")
+    return float(valor)
+
+
+def _validar_modelo_nivel2(nivel2: dict[str, Any], path: Path) -> str:
+    """Exige que nivel2.modelo sea un string no vacio."""
+    modelo = nivel2.get("modelo")
+    if not isinstance(modelo, str) or not modelo:
+        raise ConfigError(f"{path}: 'nivel2.modelo' es obligatorio y debe ser un string no vacio")
+    return modelo
 
 
 def _validar_entity_defaults(
