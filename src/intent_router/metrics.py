@@ -53,6 +53,24 @@ def hit_rate() -> float:
     return resueltos / len(_eventos)
 
 
+def desglose_por_nivel() -> dict[int, int]:
+    """Cuenta de eventos registrados agrupados por nivel de resolucion."""
+    conteo: dict[int, int] = {}
+    for evento in _eventos:
+        nivel = evento.decision.nivel
+        conteo[nivel] = conteo.get(nivel, 0) + 1
+    return conteo
+
+
+def desglose_por_intencion() -> dict[str | None, int]:
+    """Cuenta de eventos registrados agrupados por intencion resuelta (None si escalo sin resolver)."""
+    conteo: dict[str | None, int] = {}
+    for evento in _eventos:
+        intencion = evento.decision.intencion
+        conteo[intencion] = conteo.get(intencion, 0) + 1
+    return conteo
+
+
 def reset() -> None:
     """Vacia el acumulador de metricas; uso principal en tests."""
     _eventos.clear()
