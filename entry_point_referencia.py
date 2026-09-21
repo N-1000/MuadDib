@@ -42,7 +42,7 @@ class MotorRouter:
 
 def iniciar() -> MotorRouter:
     """Carga config, modelo y embeddings canonicos una sola vez al arranque, nunca por mensaje."""
-    config = cargar_config(CONFIG_PATH, RULES_PATH, ENTITIES_PATH)
+    config = cargar_config(CONFIG_PATH, RULES_PATH, ENTITIES_PATH, CANONICAL_PATH)
     modelo = load_model(MODEL_DEFAULT)
     canonical_data = _cargar_canonical(modelo) if modelo is not None else None
     return MotorRouter(config, canonical_data)

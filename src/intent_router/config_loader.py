@@ -12,16 +12,19 @@ class ConfigError(Exception):
     """Config invalida detectada al arranque: el servicio no debe iniciar."""
 
 
-def cargar_config(config_path: Path, rules_path: Path, entities_path: Path) -> dict[str, Any]:
+def cargar_config(config_path: Path, rules_path: Path, entities_path: Path, canonical_path: Path) -> dict[str, Any]:
     """Lee, valida y fusiona config.yaml, rules_nivel0.yaml y entities.yaml en el dict que espera resolve()."""
     config_data = _leer_yaml(config_path)
     rules_data = _leer_yaml(rules_path)
     entities_data = _leer_yaml(entities_path)
+    canonical_data = _leer_yaml(canonical_path)
     entity_catalog = _validar_entity_catalog(entities_data, entities_path)
+    intents = _validar_intents(rules_data, rules_path)
+    _validar_consistencia_accion(intents, canonical_data, rules_path, canonical_path)
     return {
         "client": _validar_client(config_data, config_path),
         "routing": _validar_routing(config_data, config_path),
-        "intents": _validar_intents(rules_data, rules_path),
+        "intents": intents,
         "entity_catalog": entity_catalog,
         "entity_defaults": _validar_entity_defaults(config_data, entity_catalog, config_path, entities_path),
     }
@@ -122,6 +125,31 @@ def _validar_entrada_entidad(tipo: str, entrada: Any, path: Path) -> str:
     if not isinstance(keywords, list) or not keywords or not all(isinstance(k, str) and k for k in keywords):
         raise ConfigError(f"{path}: entity_catalog.{tipo}.{valor} necesita 'keywords' como lista no vacia de strings")
     return valor
+
+
+def _validar_consistencia_accion(
+    rules_intents: list[dict[str, Any]],
+    canonical_data: dict[str, Any],
+    rules_path: Path,
+    canonical_path: Path,
+) -> None:
+    """Exige que un mismo intent name declare la misma action en rules_nivel0.yaml y canonical.yaml."""
+    acciones_canonical = {
+        intent["name"]: tuple(intent.get("action", []))
+        for intent in canonical_data.get("intents", [])
+        if isinstance(intent, dict) and isinstance(intent.get("name"), str)
+    }
+    for intent in rules_intents:
+        nombre = intent["name"]
+        if nombre not in acciones_canonical:
+            continue
+        accion_rules = tuple(intent.get("action", []))
+        accion_canonical = acciones_canonical[nombre]
+        if accion_rules != accion_canonical:
+            raise ConfigError(
+                f"'{nombre}' declara action distinta en {rules_path} ({list(accion_rules)}) "
+                f"y en {canonical_path} ({list(accion_canonical)})"
+            )
 
 
 def _validar_entity_defaults(

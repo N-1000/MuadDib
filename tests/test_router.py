@@ -487,7 +487,9 @@ def test_resolve_usa_threshold_de_config_yaml_no_el_viejo_default(tmp_path, monk
         "client: test\nentity_catalog:\n  region:\n    - value: pance\n      keywords: [\"pance\"]\n",
         encoding="utf-8",
     )
-    config = cargar_config(config_path, rules_path, entities_path)
+    canonical_path = tmp_path / "canonical.yaml"
+    canonical_path.write_text("client: test\nintents: []\n", encoding="utf-8")
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
 
     can, vec = _crear_canonical_mock(
         ("consultar_aire",), [0.70], (False,), (("show_air",),)

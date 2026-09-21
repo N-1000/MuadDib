@@ -25,7 +25,7 @@ def es_acierto(decision: Decision, esperado) -> bool | None:
 
 
 def cargar_dependencias() -> tuple[dict, object]:
-    config = cargar_config(CONFIG_PATH, RULES_PATH, ENTITIES_PATH)
+    config = cargar_config(CONFIG_PATH, RULES_PATH, ENTITIES_PATH, CANONICAL_PATH)
     modelo = load_model(MODEL_DEFAULT)
     if modelo is None:
         raise RuntimeError("No se pudo cargar el modelo de embeddings; no se puede medir la cascada real.")
