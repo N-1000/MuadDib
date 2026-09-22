@@ -8,6 +8,7 @@ from intent_router.embeddings import CanonicalEmbeddings
 from intent_router.router import (
     Decision,
     RoutingResult,
+    _decision_escalada,
     _evaluar_nivel1,
     _matchea_intent_nivel0,
     _obtener_ejecutor_nivel1,
@@ -653,3 +654,43 @@ def test_cargar_config_precalcula_phrases_y_keywords_normalizadas(tmp_path):
 
     assert config["intents"][0]["phrases_normalizadas"] == ("hola", "buenas tardes")
     assert config["entity_catalog"]["region"][0]["keywords_normalizadas"] == ("pance",)
+
+
+def test_decision_escalada_defaults():
+    d = _decision_escalada("una clausula", ("un_motivo",))
+    assert d == Decision(
+        intencion=None,
+        nivel=2,
+        confianza=0.0,
+        accion=("escalate_to_llm",),
+        sensitive=False,
+        negada=False,
+        motivos_escalada=("un_motivo",),
+        clausula="una clausula",
+        entidades={},
+        candidato_descartado=None,
+    )
+
+
+def test_decision_escalada_con_todos_los_campos():
+    d = _decision_escalada(
+        "otra clausula",
+        ("motivo_a", "motivo_b"),
+        confianza=0.73,
+        sensitive=True,
+        negada=True,
+        entidades={"region": ["pance"]},
+        candidato_descartado="consultar_calidad_aire",
+    )
+    assert d == Decision(
+        intencion=None,
+        nivel=2,
+        confianza=0.73,
+        accion=("escalate_to_llm",),
+        sensitive=True,
+        negada=True,
+        motivos_escalada=("motivo_a", "motivo_b"),
+        clausula="otra clausula",
+        entidades={"region": ["pance"]},
+        candidato_descartado="consultar_calidad_aire",
+    )

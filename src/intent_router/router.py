@@ -81,6 +81,31 @@ def _aplicar_defaults_entidades(
     return resultado, tuple(aplicados)
 
 
+def _decision_escalada(
+    clausula: str,
+    motivos: tuple[str, ...],
+    *,
+    confianza: float = 0.0,
+    sensitive: bool = False,
+    negada: bool = False,
+    entidades: dict[str, Any] | None = None,
+    candidato_descartado: str | None = None,
+) -> Decision:
+    """Construye la Decision de escalada a Nivel 2 comun a todas las compuertas de Nivel 0/1."""
+    return Decision(
+        intencion=None,
+        nivel=2,
+        confianza=confianza,
+        accion=("escalate_to_llm",),
+        sensitive=sensitive,
+        negada=negada,
+        motivos_escalada=motivos,
+        clausula=clausula,
+        entidades=entidades if entidades is not None else {},
+        candidato_descartado=candidato_descartado,
+    )
+
+
 def _evaluar_nivel0(
     texto_clausula: str,
     negada: bool,
@@ -116,15 +141,12 @@ def _construir_decision_nivel0(
     sensitive = bool(intent.get("sensitive", False))
 
     if negada:
-        return Decision(
-            intencion=None,
-            nivel=2,
+        return _decision_escalada(
+            texto_clausula,
+            ("clausula_negada_en_nivel0",),
             confianza=1.0,
-            accion=("escalate_to_llm",),
             sensitive=sensitive,
             negada=True,
-            motivos_escalada=("clausula_negada_en_nivel0",),
-            clausula=texto_clausula,
             candidato_descartado=nombre,
         )
 
@@ -136,15 +158,11 @@ def _construir_decision_nivel0(
         config,
     )
     if not cardinalidad_ok:
-        return Decision(
-            intencion=None,
-            nivel=2,
+        return _decision_escalada(
+            texto_clausula,
+            ("cardinalidad_entidad_insuficiente_en_nivel0",),
             confianza=1.0,
-            accion=("escalate_to_llm",),
             sensitive=sensitive,
-            negada=False,
-            motivos_escalada=("cardinalidad_entidad_insuficiente_en_nivel0",),
-            clausula=texto_clausula,
             entidades=entidades,
             candidato_descartado=nombre,
         )
@@ -178,32 +196,14 @@ def _evaluar_nivel1(
 
     if not esta_disponible() or canonical_data is None:
         motivos.append("modelo_no_disponible")
-        return Decision(
-            intencion=None,
-            nivel=2,
-            confianza=0.0,
-            accion=("escalate_to_llm",),
-            sensitive=False,
-            negada=negada,
-            motivos_escalada=tuple(motivos),
-            clausula=texto_clausula,
-        )
+        return _decision_escalada(texto_clausula, tuple(motivos), negada=negada)
 
     vec_msg = encode(texto_clausula)
     ranking = rank_intents(vec_msg, canonical_data)
 
     if not ranking:
         motivos.append("sin_candidatos_canonicos")
-        return Decision(
-            intencion=None,
-            nivel=2,
-            confianza=0.0,
-            accion=("escalate_to_llm",),
-            sensitive=False,
-            negada=negada,
-            motivos_escalada=tuple(motivos),
-            clausula=texto_clausula,
-        )
+        return _decision_escalada(texto_clausula, tuple(motivos), negada=negada)
 
     top1_name, s1, top1_sensitive, top1_action, top1_entity_types, top1_cardinalidad = ranking[0]
     s2 = ranking[1][1] if len(ranking) > 1 else 0.0
@@ -227,15 +227,12 @@ def _evaluar_nivel1(
         motivos.append("cardinalidad_entidad_insuficiente_en_nivel1")
 
     if motivos:
-        return Decision(
-            intencion=None,
-            nivel=2,
+        return _decision_escalada(
+            texto_clausula,
+            tuple(motivos),
             confianza=s1,
-            accion=("escalate_to_llm",),
             sensitive=top1_sensitive,
             negada=negada,
-            motivos_escalada=tuple(motivos),
-            clausula=texto_clausula,
             entidades=entidades,
             candidato_descartado=top1_name,
         )
