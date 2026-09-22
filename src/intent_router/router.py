@@ -1,5 +1,10 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
+
+import torch
+
 from intent_router.embeddings import (
     CanonicalEmbeddings,
     encode,
@@ -254,7 +259,7 @@ def resolve(
     config: dict[str, Any],
     canonical_data: CanonicalEmbeddings | None = None,
 ) -> RoutingResult:
-    """Orquesta la cascada de enrutamiento 0 -> 1 -> 2 para cada clausula del mensaje."""
+    """Orquesta la cascada 0 -> 1 -> 2; CPU-bound por el encode() de Nivel 1, un llamador async debe usar resolve_async()."""
     routing_cfg = config["routing"]
     umbral = float(routing_cfg["threshold"])
     margen_min = float(routing_cfg["min_margin"])
@@ -281,3 +286,33 @@ def resolve(
         decisiones.append(decision_n1)
 
     return RoutingResult(mensaje=mensaje, decisiones=tuple(decisiones))
+
+
+_EJECUTOR_NIVEL1: ThreadPoolExecutor | None = None
+
+
+def configurar_concurrencia_nivel1(max_workers: int = 4, torch_threads: int = 1) -> None:
+    """Crea el executor dedicado de resolve_async y fija cuantos hilos usa torch por inferencia, para que las llamadas concurrentes a encode() no se pisen la CPU entre si."""
+    global _EJECUTOR_NIVEL1
+    if _EJECUTOR_NIVEL1 is not None:
+        _EJECUTOR_NIVEL1.shutdown(wait=False)
+    _EJECUTOR_NIVEL1 = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="nivel1")
+    torch.set_num_threads(torch_threads)
+
+
+def _obtener_ejecutor_nivel1() -> ThreadPoolExecutor:
+    """Devuelve el executor de Nivel 1, configurandolo con los valores por defecto si nadie lo hizo todavia."""
+    if _EJECUTOR_NIVEL1 is None:
+        configurar_concurrencia_nivel1()
+    return _EJECUTOR_NIVEL1
+
+
+async def resolve_async(
+    mensaje: str,
+    config: dict[str, Any],
+    canonical_data: CanonicalEmbeddings | None = None,
+) -> RoutingResult:
+    """Corre resolve() en el executor dedicado de Nivel 1, para no bloquear el event loop del llamador."""
+    loop = asyncio.get_running_loop()
+    ejecutor = _obtener_ejecutor_nivel1()
+    return await loop.run_in_executor(ejecutor, resolve, mensaje, config, canonical_data)

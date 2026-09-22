@@ -10,6 +10,7 @@ dependencies = [
     "sentence-transformers>=6.0.1",
     "anthropic>=0.40.0",
     "jsonschema>=4.23.0",
+    "torch>=2.0",
 ]
 
 [dependency-groups]

@@ -704,6 +704,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rapidfuzz" },
     { name = "sentence-transformers" },
+    { name = "torch" },
 ]
 
 [package.dev-dependencies]
@@ -720,6 +721,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rapidfuzz", specifier = ">=3.9" },
     { name = "sentence-transformers", specifier = ">=6.0.1" },
+    { name = "torch", specifier = ">=2.0" },
 ]
 
 [package.metadata.requires-dev]

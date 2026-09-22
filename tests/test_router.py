@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import numpy as np
 import pytest
 from intent_router.config_loader import cargar_config
@@ -6,7 +9,10 @@ from intent_router.router import (
     Decision,
     RoutingResult,
     _evaluar_nivel1,
+    _obtener_ejecutor_nivel1,
+    configurar_concurrencia_nivel1,
     resolve,
+    resolve_async,
 )
 
 
@@ -510,3 +516,50 @@ def test_resolve_revienta_sin_seccion_routing():
     config = {"intents": []}
     with pytest.raises(KeyError):
         resolve("hola", config, canonical_data=None)
+
+
+_CONFIG_NIVEL0_SIMPLE = {
+    "intents": [
+        {
+            "name": "saludo",
+            "phrases": ["hola"],
+            "action": ["reply"],
+            "sensitive": False,
+        }
+    ],
+    "routing": {"threshold": 0.60, "min_margin": 0.05},
+}
+
+
+async def test_resolve_async_devuelve_lo_mismo_que_resolve():
+    sincrono = resolve("hola", _CONFIG_NIVEL0_SIMPLE)
+    asincrono = await resolve_async("hola", _CONFIG_NIVEL0_SIMPLE)
+    assert asincrono == sincrono
+
+
+def test_configurar_concurrencia_nivel1_fija_max_workers_del_executor():
+    configurar_concurrencia_nivel1(max_workers=7, torch_threads=1)
+    assert _obtener_ejecutor_nivel1()._max_workers == 7
+
+
+def test_configurar_concurrencia_nivel1_fija_hilos_de_torch(monkeypatch):
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=2, torch_threads=3)
+    assert llamadas == [3]
+
+
+def _resolve_lento(mensaje, config, canonical_data=None):
+    time.sleep(0.2)
+    return RoutingResult(mensaje=mensaje, decisiones=())
+
+
+async def test_resolve_async_corre_pedidos_concurrentes_en_paralelo(monkeypatch):
+    monkeypatch.setattr("intent_router.router.resolve", _resolve_lento)
+    configurar_concurrencia_nivel1(max_workers=4, torch_threads=1)
+
+    inicio = time.perf_counter()
+    await asyncio.gather(*(resolve_async(f"msg{i}", {}) for i in range(4)))
+    duracion = time.perf_counter() - inicio
+
+    assert duracion < 0.35
