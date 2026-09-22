@@ -98,8 +98,10 @@ def _evaluar_nivel0(
 
 
 def _matchea_intent_nivel0(intent: dict[str, Any], texto_norm: str) -> bool:
-    """Evalua si texto_norm coincide exactamente con alguna phrase declarada."""
-    phrases = [normalize(p) for p in intent.get("phrases", [])]
+    """Evalua si texto_norm coincide exactamente con alguna phrase declarada; usa phrases_normalizadas si cargar_config() ya las precalculo."""
+    phrases = intent.get("phrases_normalizadas")
+    if phrases is None:
+        phrases = [normalize(p) for p in intent.get("phrases", [])]
     return texto_norm in phrases
 
 

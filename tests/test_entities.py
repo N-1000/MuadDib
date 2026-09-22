@@ -48,3 +48,13 @@ def test_no_duplica_valor_si_matchean_varias_keywords_de_la_misma_entrada():
 
 def test_config_sin_entity_catalog_devuelve_dict_vacio():
     assert extract_entities("pance", {}) == {}
+
+
+def test_usa_keywords_normalizadas_precalculadas_en_vez_de_las_crudas():
+    config = {
+        "entity_catalog": {
+            "region": [{"value": "pance", "keywords": ["esto no importa"], "keywords_normalizadas": ("pance",)}],
+        }
+    }
+    assert extract_entities("el aire en pance", config) == {"region": ["pance"]}
+    assert extract_entities("esto no importa", config) == {}

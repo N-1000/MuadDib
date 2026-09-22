@@ -9,6 +9,7 @@ from intent_router.router import (
     Decision,
     RoutingResult,
     _evaluar_nivel1,
+    _matchea_intent_nivel0,
     _obtener_ejecutor_nivel1,
     configurar_concurrencia_nivel1,
     resolve,
@@ -613,3 +614,42 @@ async def test_resolve_async_corre_pedidos_concurrentes_en_paralelo(monkeypatch)
     duracion = time.perf_counter() - inicio
 
     assert duracion < 0.35
+
+
+def test_matchea_intent_nivel0_usa_phrases_normalizadas_precalculadas():
+    intent = {"name": "x", "phrases": ["esto no importa"], "phrases_normalizadas": ("hola",)}
+    assert _matchea_intent_nivel0(intent, "hola") is True
+    assert _matchea_intent_nivel0(intent, "esto no importa") is False
+
+
+def test_matchea_intent_nivel0_normaliza_al_vuelo_si_no_hay_cache():
+    intent = {"name": "x", "phrases": ["HOLA"]}
+    assert _matchea_intent_nivel0(intent, "hola") is True
+
+
+def test_cargar_config_precalcula_phrases_y_keywords_normalizadas(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    rules_path = tmp_path / "rules_nivel0.yaml"
+    entities_path = tmp_path / "entities.yaml"
+    canonical_path = tmp_path / "canonical.yaml"
+    config_path.write_text(
+        "client: test\nrouting:\n  threshold: 0.60\n  min_margin: 0.05\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
+        encoding="utf-8",
+    )
+    rules_path.write_text(
+        "client: test\nintents:\n  - name: saludo\n    phrases: [\"HOLA\", \"buenas tardes\"]\n",
+        encoding="utf-8",
+    )
+    entities_path.write_text(
+        "client: test\nentity_catalog:\n  region:\n    - value: pance\n      keywords: [\"PANCE\"]\n",
+        encoding="utf-8",
+    )
+    canonical_path.write_text("client: test\nintents: []\n", encoding="utf-8")
+
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+    assert config["intents"][0]["phrases_normalizadas"] == ("hola", "buenas tardes")
+    assert config["entity_catalog"]["region"][0]["keywords_normalizadas"] == ("pance",)

@@ -5,6 +5,8 @@ from typing import Any
 
 import yaml
 
+from intent_router.normalizer import normalize
+
 CAMPOS_ROUTING = ("threshold", "min_margin")
 
 
@@ -20,6 +22,7 @@ def cargar_config(config_path: Path, rules_path: Path, entities_path: Path, cano
     canonical_data = _leer_yaml(canonical_path)
     entity_catalog = _validar_entity_catalog(entities_data, entities_path)
     intents = _validar_intents(rules_data, rules_path)
+    _precomputar_normalizaciones(intents, entity_catalog)
     _validar_consistencia_accion(intents, canonical_data, rules_path, canonical_path)
     acciones_declaradas, acciones_sensibles = _derivar_acciones(intents, canonical_data.get("intents", []))
     return {
@@ -154,6 +157,18 @@ def _validar_consistencia_accion(
                 f"'{nombre}' declara action distinta en {rules_path} ({list(accion_rules)}) "
                 f"y en {canonical_path} ({list(accion_canonical)})"
             )
+
+
+def _precomputar_normalizaciones(
+    intents: list[dict[str, Any]],
+    entity_catalog: dict[str, list[dict[str, Any]]],
+) -> None:
+    """Normaliza una sola vez, al cargar la config, las phrases de cada intent y las keywords de cada entidad."""
+    for intent in intents:
+        intent["phrases_normalizadas"] = tuple(normalize(p) for p in intent.get("phrases", []))
+    for entradas in entity_catalog.values():
+        for entrada in entradas:
+            entrada["keywords_normalizadas"] = tuple(normalize(k) for k in entrada.get("keywords", []))
 
 
 def _derivar_acciones(
