@@ -549,6 +549,56 @@ def test_configurar_concurrencia_nivel1_fija_hilos_de_torch(monkeypatch):
     assert llamadas == [3]
 
 
+def test_default_max_workers_usa_cpu_count_sin_env_var(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_MAX_WORKERS", raising=False)
+    monkeypatch.setattr("intent_router.router.os.cpu_count", lambda: 8)
+    configurar_concurrencia_nivel1()
+    assert _obtener_ejecutor_nivel1()._max_workers == 8
+
+
+def test_default_max_workers_lee_env_var(monkeypatch):
+    monkeypatch.setenv("MUADDIB_NIVEL1_MAX_WORKERS", "5")
+    configurar_concurrencia_nivel1()
+    assert _obtener_ejecutor_nivel1()._max_workers == 5
+
+
+def test_default_torch_threads_reparte_cores_entre_max_workers(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_TORCH_THREADS", raising=False)
+    monkeypatch.setattr("intent_router.router.os.cpu_count", lambda: 12)
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=4)
+    assert llamadas == [3]
+
+
+def test_default_torch_threads_nunca_baja_de_uno(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_TORCH_THREADS", raising=False)
+    monkeypatch.setattr("intent_router.router.os.cpu_count", lambda: 4)
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=16)
+    assert llamadas == [1]
+
+
+def test_default_torch_threads_lee_env_var(monkeypatch):
+    monkeypatch.setenv("MUADDIB_NIVEL1_TORCH_THREADS", "2")
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=4)
+    assert llamadas == [2]
+
+
+def test_sin_llamar_configurar_nunca_deja_torch_sin_pinear(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_TORCH_THREADS", raising=False)
+    monkeypatch.delenv("MUADDIB_NIVEL1_MAX_WORKERS", raising=False)
+    monkeypatch.setattr("intent_router.router._EJECUTOR_NIVEL1", None)
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    _obtener_ejecutor_nivel1()
+    assert len(llamadas) == 1
+    assert llamadas[0] >= 1
+
+
 def _resolve_lento(mensaje, config, canonical_data=None):
     time.sleep(0.2)
     return RoutingResult(mensaje=mensaje, decisiones=())

@@ -1,4 +1,5 @@
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
@@ -290,14 +291,33 @@ def resolve(
 
 _EJECUTOR_NIVEL1: ThreadPoolExecutor | None = None
 
+_VAR_MAX_WORKERS = "MUADDIB_NIVEL1_MAX_WORKERS"
+_VAR_TORCH_THREADS = "MUADDIB_NIVEL1_TORCH_THREADS"
 
-def configurar_concurrencia_nivel1(max_workers: int = 4, torch_threads: int = 1) -> None:
+
+def _max_workers_por_defecto() -> int:
+    """Lee MUADDIB_NIVEL1_MAX_WORKERS, o usa los cores disponibles si no esta seteada."""
+    variable = os.environ.get(_VAR_MAX_WORKERS)
+    return int(variable) if variable is not None else (os.cpu_count() or 1)
+
+
+def _torch_threads_por_defecto(max_workers: int) -> int:
+    """Lee MUADDIB_NIVEL1_TORCH_THREADS, o reparte los cores disponibles entre max_workers si no esta seteada."""
+    variable = os.environ.get(_VAR_TORCH_THREADS)
+    if variable is not None:
+        return int(variable)
+    return max(1, (os.cpu_count() or 1) // max_workers)
+
+
+def configurar_concurrencia_nivel1(max_workers: int | None = None, torch_threads: int | None = None) -> None:
     """Crea el executor dedicado de resolve_async y fija cuantos hilos usa torch por inferencia, para que las llamadas concurrentes a encode() no se pisen la CPU entre si."""
     global _EJECUTOR_NIVEL1
+    workers = max_workers if max_workers is not None else _max_workers_por_defecto()
+    hilos = torch_threads if torch_threads is not None else _torch_threads_por_defecto(workers)
     if _EJECUTOR_NIVEL1 is not None:
         _EJECUTOR_NIVEL1.shutdown(wait=False)
-    _EJECUTOR_NIVEL1 = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="nivel1")
-    torch.set_num_threads(torch_threads)
+    _EJECUTOR_NIVEL1 = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="nivel1")
+    torch.set_num_threads(hilos)
 
 
 def _obtener_ejecutor_nivel1() -> ThreadPoolExecutor:
