@@ -1,5 +1,7 @@
 """Motor de Nivel 2: escalada con tool-use de Claude para clausulas que el router no pudo resolver."""
 
+import asyncio
+import inspect
 import logging
 import time
 from typing import Any
@@ -152,7 +154,7 @@ async def escalar(
             )
 
         tool_results = [
-            _ejecutar_bloque(bloque, registro, cfg["max_caracteres_resultado_herramienta"], llamadas, fallidas)
+            await _ejecutar_bloque(bloque, registro, cfg["max_caracteres_resultado_herramienta"], llamadas, fallidas)
             for bloque in bloques_tool_use
         ]
         mensajes.append({"role": "user", "content": tool_results})
@@ -203,14 +205,14 @@ def _elegir_herramienta_efecto(
     return None
 
 
-def _ejecutar_bloque(
+async def _ejecutar_bloque(
     bloque: Any,
     registro: dict[str, Herramienta],
     tope_caracteres: int,
     llamadas: list[str],
     fallidas: list[str],
 ) -> dict[str, Any]:
-    """Ejecuta una herramienta sin efecto, o produce un tool_result de error sin exponer detalles internos."""
+    """Ejecuta una herramienta sin efecto (async directo, sincrona en un thread), o produce un tool_result de error."""
     herramienta = registro.get(bloque.name)
     if herramienta is None:
         logger.error("herramienta_desconocida", extra={"herramienta": bloque.name})
@@ -222,7 +224,7 @@ def _ejecutar_bloque(
         return _tool_result_error(bloque.id)
 
     try:
-        resultado = herramienta.funcion(**bloque.input)
+        resultado = await _invocar_herramienta(herramienta, bloque.input)
     except Exception:
         fallidas.append(herramienta.name)
         logger.error("herramienta_exception", exc_info=True, extra={"herramienta": herramienta.name})
@@ -230,6 +232,13 @@ def _ejecutar_bloque(
 
     llamadas.append(herramienta.name)
     return {"type": "tool_result", "tool_use_id": bloque.id, "content": _truncar(str(resultado), tope_caracteres)}
+
+
+async def _invocar_herramienta(herramienta: Herramienta, entrada: dict[str, Any]) -> Any:
+    """Espera la herramienta si es async, o la corre en un thread si es sincrona, para no bloquear el event loop."""
+    if inspect.iscoroutinefunction(herramienta.funcion):
+        return await herramienta.funcion(**entrada)
+    return await asyncio.to_thread(herramienta.funcion, **entrada)
 
 
 def _tool_result_error(tool_use_id: str) -> dict[str, Any]:

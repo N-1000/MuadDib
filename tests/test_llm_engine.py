@@ -1,3 +1,5 @@
+import asyncio
+import time
 from types import SimpleNamespace
 
 import anthropic
@@ -257,3 +259,50 @@ async def test_resolver_escaladas_reemplaza_solo_las_decisiones_escaladas():
     assert salida.decisiones[0] == decision_n0
     assert salida.decisiones[1].nivel == 2
     assert salida.decisiones[1].respuesta_texto == "resuelto"
+
+
+async def test_escalar_corre_herramienta_sincrona_en_thread_sin_bloquear_el_loop():
+    def _dormir(region):
+        time.sleep(0.2)
+        return "listo"
+
+    respuestas = [
+        _respuesta([_tool_use("t1", "show_air", {"region": "pance"})]),
+        _respuesta([_texto("hecho")]),
+    ]
+    cliente = _ClienteFake(respuestas)
+    herramientas = (_herramienta("show_air", funcion=_dormir),)
+
+    async def _tarea_paralela():
+        for _ in range(10):
+            await asyncio.sleep(0.02)
+
+    inicio = time.perf_counter()
+    await asyncio.gather(
+        escalar((_decision_escalada(),), herramientas, _config(), api_key="x", cliente=cliente),
+        _tarea_paralela(),
+    )
+    duracion = time.perf_counter() - inicio
+
+    assert duracion < 0.35
+
+
+async def test_escalar_soporta_herramienta_async_sin_pasarla_por_un_thread():
+    llamadas = []
+
+    async def _consulta_async(region):
+        llamadas.append(region)
+        await asyncio.sleep(0.01)
+        return "async ok"
+
+    respuestas = [
+        _respuesta([_tool_use("t1", "show_air", {"region": "pance"})]),
+        _respuesta([_texto("hecho")]),
+    ]
+    cliente = _ClienteFake(respuestas)
+    herramientas = (_herramienta("show_air", funcion=_consulta_async),)
+
+    decision = await escalar((_decision_escalada(),), herramientas, _config(), api_key="x", cliente=cliente)
+
+    assert llamadas == ["pance"]
+    assert decision.herramientas_llamadas == ("show_air",)
