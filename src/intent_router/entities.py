@@ -19,10 +19,12 @@ def extract_entities(texto: str, config: dict[str, Any]) -> dict[str, list[str]]
 
 
 def _valores_detectados(texto_norm: str, entradas: list[dict[str, Any]]) -> list[str]:
-    """Devuelve, en orden, los 'value' cuya keyword aparece en texto_norm."""
+    """Devuelve, en orden, los 'value' cuya keyword aparece en texto_norm; usa keywords_normalizadas si cargar_config() ya las precalculo."""
     valores: list[str] = []
     for entrada in entradas:
-        keywords = [normalize(k) for k in entrada.get("keywords", [])]
+        keywords = entrada.get("keywords_normalizadas")
+        if keywords is None:
+            keywords = [normalize(k) for k in entrada.get("keywords", [])]
         if any(k in texto_norm for k in keywords):
             valores.append(entrada["value"])
     return valores

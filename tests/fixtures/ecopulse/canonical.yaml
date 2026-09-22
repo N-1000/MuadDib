@@ -1,0 +1,221 @@
+# canonical.yaml v2 — EcoPulse
+#
+# Definicion formal de intenciones para el Nivel 1 (similitud semantica / embeddings).
+# Cada intencion mapea oraciones canonicas reales hacia una accion del backend.
+# Convencion: texto normalizado plano (sin tildes, con eñe protegida), alineado con frases.txt.
+# Esquema completo con sensitive: bool obligatorio por regla de arquitectura.
+#
+# Reescrito (2026-09-19) contra la auditoria real del backend de EcoPulse
+# (sesion ecopulse-iau-2026-16, 2026-09-16). Tres categorias:
+#
+# 1. Accion real: el backend tiene endpoint/funcion que la resuelve hoy.
+# 2. Reconocida-sin-capacidad: el router SI reconoce la intencion (para que
+#    EcoPulse pueda responder con texto honesto), pero action: [] porque no
+#    hay nada que ejecutar -- no auth/sesion (activar_alerta, cancelar_alerta,
+#    configurar_alerta, agregar_sensor), no endpoint (consultar_pronostico,
+#    solicitar_reporte), o dato bloqueado (comparar_calidad_aire: comuna/
+#    barrio hardcodeado a "Cali" en clickhouse_nodes.py, sin shapefile de
+#    comunas de Cali todavia). El texto de respuesta para esta categoria vive
+#    del lado de EcoPulse, no aca -- el router solo declara la intencion.
+#    comparar_calidad_aire pierde entity/entity_cardinality en esta version:
+#    ya no despacha nada, exigir 2 regiones para el mismo texto honesto que
+#    sin ellas no cumple ningun proposito.
+# 3. Eliminada: actualizar_datos_sensor no es un "todavia no", es un "nunca"
+#    (los sensores son IoT fisicos sin canal de comando). Se saca del
+#    canonical en vez de reconocida-sin-capacidad.
+#
+# sensitive:true se mantiene en las 4 reconocidas-sin-capacidad que lo
+# tenian (activar_alerta, cancelar_alerta, configurar_alerta, agregar_sensor)
+# aunque action este vacia: el campo describe la naturaleza de la intencion,
+# no si hoy tiene efecto. Con action: [] el router no la gatea igual (ver
+# router.py, la compuerta de sensitive exige accion no vacia) pero el dato
+# sigue siendo verdad por si algun dia se le agrega la accion real.
+#
+# DEUDA MEDIDA, NO CRITERIO MAL PUESTO (2026-09-19): validate_canonical.py
+# (leave-one-out) mide 46.7% de colision en v1 (13 intents, el archivo que
+# reemplaza este) y 47.5% en v2 (17 intents) -- practicamente el mismo
+# numero. v2 no empeora la separabilidad, pero tampoco la resuelve: casi la
+# mitad de las frases canonicas quedan, en leave-one-out, mas cerca del
+# centroide de otra intencion que del propio. Eso es real y viene de antes
+# de esta reescritura. simulate_cascade.py mide accuracy real contra un
+# corpus (~92% en Nivel 1) usando el centroide completo, no leave-one-out,
+# asi que los dos numeros no se contradicen -- miden cosas distintas -- pero
+# ninguno invalida al otro. No confundir "v2 no es peor que v1" con "v2 esta
+# sano": no lo esta. Corregir esto es reformular frases canonicas contra
+# datos reales, no una tarea de este commit.
+
+client: ecopulse
+
+intents:
+  # --- Accion real: el backend la resuelve hoy ---
+
+  - name: consultar_calidad_aire
+    action: ["show_air_quality"]
+    sensitive: false
+    phrases:
+      - "mostrame la calidad del aire de hoy"
+      - "como esta el aire hoy"
+      - "cual es el indice de calidad del aire"
+      - "dele mostrame los datos del aire"
+      - "oiga y como esta el aire por mi barrio"
+      - "cuanto pm2.5 hay ahorita"
+      - "que tan grave esta la contaminacion"
+      - "por que esta tan contaminado hoy"
+      - "que contamina mas en cali"
+      - "mostrame que esta pasando"
+
+  - name: localizar_sensor
+    action: ["locate_sensor"]
+    sensitive: false
+    phrases:
+      - "busca el sensor mas cercano"
+      - "encontra la ubicacion de chipichape"
+      - "donde esta el sensor mas cercano"
+
+  - name: consultar_estado_sensor
+    action: ["get_sensor_health"]
+    sensitive: false
+    phrases:
+      - "revisa el sensor de melendez"
+      - "cual sensor esta fallando"
+      - "decime el estado del sensor"
+      - "hay algun problema con la estacion del sur"
+      - "esta funcionando bien todo"
+
+  - name: recomendar_actividad_salud
+    action: ["get_health_activity_advice"]
+    sensitive: false
+    phrases:
+      - "podrias decirme si hoy es un buen dia para salir a correr"
+      - "necesito saber si puedo salir a trotar"
+      - "esta bien salir a hacer ejercicio con este aire"
+
+  - name: pedir_ayuda_soporte
+    action: ["show_help"]
+    sensitive: false
+    phrases:
+      - "ayudame a entender estos datos"
+      - "explicame que significa el indice aqi"
+      - "guiame para configurar mi cuenta"
+      - "quien reporta estos datos"
+      - "se puede confiar en estos datos"
+      - "ayudame con esto por favor"
+
+  # --- Nuevas: capacidades reales sin intent declarado hasta ahora ---
+
+  - name: consultar_noticias_ambientales
+    action: ["show_news"]
+    sensitive: false
+    phrases:
+      - "hay noticias sobre el medio ambiente en cali"
+      - "que se sabe de la contaminacion en las noticias"
+      - "contame las ultimas noticias ambientales"
+      - "hay alguna alerta ambiental reportada en la prensa"
+
+  - name: consultar_parques_zonas_verdes
+    action: ["show_green_zones"]
+    sensitive: false
+    phrases:
+      - "que parques o zonas verdes hay cerca"
+      - "donde puedo encontrar un parque para caminar"
+      - "muestrame las zonas verdes de cali"
+      - "cual es el parque mas cercano"
+
+  - name: consultar_tendencia_calidad_aire
+    action: ["show_trend"]
+    entity: ["periodo"]
+    sensitive: false
+    phrases:
+      - "como ha variado el aire en las ultimas 24 horas"
+      - "muestrame como ha cambiado el aire hora por hora hoy"
+      - "dame la curva de las ultimas 24 horas"
+      - "como ha sido la calidad del aire este año"
+      - "dame el historico mensual de contaminacion"
+      - "muestrame los promedios de los ultimos meses"
+      - "como ha cambiado el aire mes a mes"
+
+  - name: consultar_serie_por_sensor
+    action: ["show_sensor_series"]
+    sensitive: false
+    phrases:
+      - "muestrame los datos de cada sensor por separado"
+      - "quiero ver la serie de cada estacion"
+      - "compara las lecturas sensor por sensor"
+      - "como se comporta cada sensor individualmente"
+
+  - name: consultar_ranking_nodos_ica
+    action: ["show_node_ranking"]
+    sensitive: false
+    phrases:
+      - "cual es el nodo con mayor contaminacion"
+      - "cual es el sensor mas contaminado ahora mismo"
+      - "cual es el nodo con mejor calidad del aire"
+      - "que zona tiene el aire mas limpio ahorita"
+
+  # --- Reconocida-sin-capacidad: el router la reconoce, action: [] ---
+  # EcoPulse escribe el texto de respuesta a partir del intent_name.
+
+  - name: consultar_pronostico
+    action: []
+    sensitive: false
+    phrases:
+      - "cuando va a mejorar el aire"
+      - "como va a estar el aire manana en cali"
+      - "mostrame el pronostico de contaminacion para esta semana"
+      - "va a subir el pm2.5 en la tarde o baja"
+
+  - name: solicitar_reporte
+    action: []
+    sensitive: false
+    phrases:
+      - "dame el reporte semanal"
+      - "enviame el pdf del mes pasado"
+      - "repeti el ultimo reporte"
+      - "parce mandame el reporte de una vez"
+      - "quisiera un reporte completo de la ultima semana con los niveles de pm2.5 y ozono"
+
+  - name: comparar_calidad_aire
+    action: []
+    sensitive: false
+    phrases:
+      - "compara la calidad del aire entre siloe y ciudad jardin"
+      - "donde esta mas limpio el aire en el centro o en pance"
+      - "decime la diferencia de contaminacion entre menga y san pedro"
+      - "entre el norte y el sur cual tiene mejor aire hoy"
+
+  - name: activar_alerta
+    action: []
+    sensitive: true
+    phrases:
+      - "activa las alertas de contaminacion"
+      - "ve activame la alerta pues"
+      - "avisame si sube la contaminacion"
+      - "notificame cuando el aire este malo"
+
+  - name: cancelar_alerta
+    action: []
+    sensitive: true
+    phrases:
+      - "cancela la notificacion de la tarde"
+      - "quita la alerta de las mananas"
+      - "no quiero mas notificaciones"
+      - "listo cancela todo"
+      - "no me mandes nada hoy"
+      - "nunca me avises los fines de semana"
+
+  - name: configurar_alerta
+    action: []
+    sensitive: true
+    phrases:
+      - "configura la alerta para pm2.5"
+      - "cambiame el limite de la alerta a 100 de aqi"
+      - "subile el umbral a la alerta para que no suene tan seguido"
+
+  - name: agregar_sensor
+    action: []
+    sensitive: true
+    phrases:
+      - "agrega el sensor nuevo a mi lista"
+      - "añade el nodo de chipichape a mis sensores"
+      - "guardame la estacion de melendez en mis favoritos"
+      - "dejame este sensor guardado en mi lista"

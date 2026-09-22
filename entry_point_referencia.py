@@ -9,10 +9,11 @@ from intent_router.embeddings import MODEL_DEFAULT, load_model, precompute_canon
 from intent_router.metrics import EventoDecision, log_decision
 from intent_router.router import RoutingResult, resolve
 
-CONFIG_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "config.yaml"
-RULES_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "rules_nivel0.yaml"
-ENTITIES_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "entities.yaml"
-CANONICAL_PATH = Path(__file__).resolve().parent / "clients" / "ecopulse" / "canonical.yaml"
+_FIXTURE_DIR = Path(__file__).resolve().parent / "tests" / "fixtures" / "ecopulse"
+CONFIG_PATH = _FIXTURE_DIR / "config.yaml"
+RULES_PATH = _FIXTURE_DIR / "rules_nivel0.yaml"
+ENTITIES_PATH = _FIXTURE_DIR / "entities.yaml"
+CANONICAL_PATH = _FIXTURE_DIR / "canonical.yaml"
 
 
 class MotorRouter:
@@ -42,7 +43,7 @@ class MotorRouter:
 
 def iniciar() -> MotorRouter:
     """Carga config, modelo y embeddings canonicos una sola vez al arranque, nunca por mensaje."""
-    config = cargar_config(CONFIG_PATH, RULES_PATH, ENTITIES_PATH)
+    config = cargar_config(CONFIG_PATH, RULES_PATH, ENTITIES_PATH, CANONICAL_PATH)
     modelo = load_model(MODEL_DEFAULT)
     canonical_data = _cargar_canonical(modelo) if modelo is not None else None
     return MotorRouter(config, canonical_data)

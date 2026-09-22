@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import numpy as np
 import pytest
 from intent_router.config_loader import cargar_config
@@ -5,8 +8,13 @@ from intent_router.embeddings import CanonicalEmbeddings
 from intent_router.router import (
     Decision,
     RoutingResult,
+    _decision_escalada,
     _evaluar_nivel1,
+    _matchea_intent_nivel0,
+    _obtener_ejecutor_nivel1,
+    configurar_concurrencia_nivel1,
     resolve,
+    resolve_async,
 )
 
 
@@ -156,6 +164,123 @@ def test_registro_exhaustivo_de_multiples_fallos(monkeypatch):
     assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
     assert "clausula_negada_en_nivel1" in d.motivos_escalada
     assert len(d.motivos_escalada) == 4
+
+
+def test_resolucion_nivel1_con_accion_vacia_devuelve_intencion(monkeypatch):
+    """El anfitrion necesita el name del intent para mapear intencion -> texto, incluso sin accion que despachar."""
+    can, vec = _crear_canonical_mock(
+        ("consultar_pronostico",), [0.900], (False,), ((),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("como va a estar el aire manana", False, can, umbral=0.60, margen_min=0.05, config={})
+    assert d.nivel == 1
+    assert d.intencion == "consultar_pronostico"
+    assert d.accion == ()
+
+
+def test_sensitive_con_accion_vacia_no_escala_resuelve_en_nivel1(monkeypatch):
+    """Sin accion que despachar no hay riesgo que gatear: sensitive true + action [] resuelve igual."""
+    can, vec = _crear_canonical_mock(
+        ("politica_privacidad",), [0.900], (True,), ((),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("cual es la politica de privacidad", False, can, umbral=0.60, margen_min=0.05, config={})
+    assert d.nivel == 1
+    assert d.intencion == "politica_privacidad"
+    assert d.accion == ()
+    assert d.motivos_escalada == ()
+    assert d.sensitive is True, "sensitive debe seguir diciendo la verdad aunque no gatee sin accion"
+
+
+def test_sensitive_con_accion_no_vacia_sigue_escalando(monkeypatch):
+    """La compuerta sigue exigiendose igual que hoy en cuanto hay una accion real que gatear."""
+    can, vec = _crear_canonical_mock(
+        ("activar_alerta",), [0.900], (True,), (("enable_alert",),)
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1("activa la alerta", False, can, umbral=0.60, margen_min=0.05, config={})
+    assert d.nivel == 2
+    assert d.intencion is None
+    assert d.candidato_descartado == "activar_alerta"
+    assert "fail_safe_sensitive_en_nivel1" in d.motivos_escalada
+
+
+_CONFIG_PERIODO_CON_DEFAULT = {
+    "entity_catalog": {
+        "periodo": [
+            {"value": "24h", "keywords": ["ultimas 24 horas"]},
+            {"value": "mensual", "keywords": ["mensual"]},
+        ],
+    },
+    "entity_defaults": {"periodo": "24h"},
+}
+
+
+def test_default_de_entidad_se_aplica_si_falta_en_el_mensaje(monkeypatch):
+    """show_trend no puede despachar sin saber que periodo -- si el usuario no lo dijo, se asume 24h."""
+    can, vec = _crear_canonical_mock(
+        ("consultar_tendencia_calidad_aire",),
+        [0.900],
+        (False,),
+        (("show_trend",),),
+        entity_types=(("periodo",),),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1(
+        "muestrame la tendencia", False, can, umbral=0.60, margen_min=0.05, config=_CONFIG_PERIODO_CON_DEFAULT
+    )
+    assert d.nivel == 1
+    assert d.entidades == {"periodo": ["24h"]}
+    assert d.entidades_default == ("periodo",)
+
+
+def test_default_de_entidad_no_pisa_lo_que_dijo_el_usuario(monkeypatch):
+    """Si el usuario especifico el periodo, el default no se aplica -- entidades_default queda vacio."""
+    can, vec = _crear_canonical_mock(
+        ("consultar_tendencia_calidad_aire",),
+        [0.900],
+        (False,),
+        (("show_trend",),),
+        entity_types=(("periodo",),),
+    )
+    monkeypatch.setattr("intent_router.router.encode", lambda _: vec)
+    monkeypatch.setattr("intent_router.router.esta_disponible", lambda: True)
+
+    d = _evaluar_nivel1(
+        "dame el historico mensual", False, can, umbral=0.60, margen_min=0.05, config=_CONFIG_PERIODO_CON_DEFAULT
+    )
+    assert d.nivel == 1
+    assert d.entidades == {"periodo": ["mensual"]}
+    assert d.entidades_default == ()
+
+
+def test_default_de_entidad_se_aplica_en_nivel0():
+    config = {
+        "intents": [
+            {
+                "name": "consultar_algo",
+                "phrases": ["dame la tendencia"],
+                "action": ["show_trend"],
+                "entity": ["periodo"],
+                "sensitive": False,
+            }
+        ],
+        "routing": {"threshold": 0.60, "min_margin": 0.05},
+        **_CONFIG_PERIODO_CON_DEFAULT,
+    }
+    res = resolve("dame la tendencia", config)
+    d = res.decisiones[0]
+    assert d.nivel == 0
+    assert d.entidades == {"periodo": ["24h"]}
+    assert d.entidades_default == ("periodo",)
 
 
 _ENTITY_CATALOG_REGION = {
@@ -354,7 +479,10 @@ def test_resolve_usa_threshold_de_config_yaml_no_el_viejo_default(tmp_path, monk
     config_path = tmp_path / "config.yaml"
     rules_path = tmp_path / "rules_nivel0.yaml"
     config_path.write_text(
-        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.05\n",
+        "client: test\nrouting:\n  threshold: 0.80\n  min_margin: 0.05\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
         encoding="utf-8",
     )
     rules_path.write_text(
@@ -370,7 +498,9 @@ def test_resolve_usa_threshold_de_config_yaml_no_el_viejo_default(tmp_path, monk
         "client: test\nentity_catalog:\n  region:\n    - value: pance\n      keywords: [\"pance\"]\n",
         encoding="utf-8",
     )
-    config = cargar_config(config_path, rules_path, entities_path)
+    canonical_path = tmp_path / "canonical.yaml"
+    canonical_path.write_text("client: test\nintents: []\n", encoding="utf-8")
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
 
     can, vec = _crear_canonical_mock(
         ("consultar_aire",), [0.70], (False,), (("show_air",),)
@@ -388,3 +518,179 @@ def test_resolve_revienta_sin_seccion_routing():
     config = {"intents": []}
     with pytest.raises(KeyError):
         resolve("hola", config, canonical_data=None)
+
+
+_CONFIG_NIVEL0_SIMPLE = {
+    "intents": [
+        {
+            "name": "saludo",
+            "phrases": ["hola"],
+            "action": ["reply"],
+            "sensitive": False,
+        }
+    ],
+    "routing": {"threshold": 0.60, "min_margin": 0.05},
+}
+
+
+async def test_resolve_async_devuelve_lo_mismo_que_resolve():
+    sincrono = resolve("hola", _CONFIG_NIVEL0_SIMPLE)
+    asincrono = await resolve_async("hola", _CONFIG_NIVEL0_SIMPLE)
+    assert asincrono == sincrono
+
+
+def test_configurar_concurrencia_nivel1_fija_max_workers_del_executor():
+    configurar_concurrencia_nivel1(max_workers=7, torch_threads=1)
+    assert _obtener_ejecutor_nivel1()._max_workers == 7
+
+
+def test_configurar_concurrencia_nivel1_fija_hilos_de_torch(monkeypatch):
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=2, torch_threads=3)
+    assert llamadas == [3]
+
+
+def test_default_max_workers_usa_cpu_count_sin_env_var(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_MAX_WORKERS", raising=False)
+    monkeypatch.setattr("intent_router.router.os.cpu_count", lambda: 8)
+    configurar_concurrencia_nivel1()
+    assert _obtener_ejecutor_nivel1()._max_workers == 8
+
+
+def test_default_max_workers_lee_env_var(monkeypatch):
+    monkeypatch.setenv("MUADDIB_NIVEL1_MAX_WORKERS", "5")
+    configurar_concurrencia_nivel1()
+    assert _obtener_ejecutor_nivel1()._max_workers == 5
+
+
+def test_default_torch_threads_reparte_cores_entre_max_workers(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_TORCH_THREADS", raising=False)
+    monkeypatch.setattr("intent_router.router.os.cpu_count", lambda: 12)
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=4)
+    assert llamadas == [3]
+
+
+def test_default_torch_threads_nunca_baja_de_uno(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_TORCH_THREADS", raising=False)
+    monkeypatch.setattr("intent_router.router.os.cpu_count", lambda: 4)
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=16)
+    assert llamadas == [1]
+
+
+def test_default_torch_threads_lee_env_var(monkeypatch):
+    monkeypatch.setenv("MUADDIB_NIVEL1_TORCH_THREADS", "2")
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    configurar_concurrencia_nivel1(max_workers=4)
+    assert llamadas == [2]
+
+
+def test_sin_llamar_configurar_nunca_deja_torch_sin_pinear(monkeypatch):
+    monkeypatch.delenv("MUADDIB_NIVEL1_TORCH_THREADS", raising=False)
+    monkeypatch.delenv("MUADDIB_NIVEL1_MAX_WORKERS", raising=False)
+    monkeypatch.setattr("intent_router.router._EJECUTOR_NIVEL1", None)
+    llamadas = []
+    monkeypatch.setattr("intent_router.router.torch.set_num_threads", llamadas.append)
+    _obtener_ejecutor_nivel1()
+    assert len(llamadas) == 1
+    assert llamadas[0] >= 1
+
+
+def _resolve_lento(mensaje, config, canonical_data=None):
+    time.sleep(0.2)
+    return RoutingResult(mensaje=mensaje, decisiones=())
+
+
+async def test_resolve_async_corre_pedidos_concurrentes_en_paralelo(monkeypatch):
+    monkeypatch.setattr("intent_router.router.resolve", _resolve_lento)
+    configurar_concurrencia_nivel1(max_workers=4, torch_threads=1)
+
+    inicio = time.perf_counter()
+    await asyncio.gather(*(resolve_async(f"msg{i}", {}) for i in range(4)))
+    duracion = time.perf_counter() - inicio
+
+    assert duracion < 0.35
+
+
+def test_matchea_intent_nivel0_usa_phrases_normalizadas_precalculadas():
+    intent = {"name": "x", "phrases": ["esto no importa"], "phrases_normalizadas": ("hola",)}
+    assert _matchea_intent_nivel0(intent, "hola") is True
+    assert _matchea_intent_nivel0(intent, "esto no importa") is False
+
+
+def test_matchea_intent_nivel0_normaliza_al_vuelo_si_no_hay_cache():
+    intent = {"name": "x", "phrases": ["HOLA"]}
+    assert _matchea_intent_nivel0(intent, "hola") is True
+
+
+def test_cargar_config_precalcula_phrases_y_keywords_normalizadas(tmp_path):
+    config_path = tmp_path / "config.yaml"
+    rules_path = tmp_path / "rules_nivel0.yaml"
+    entities_path = tmp_path / "entities.yaml"
+    canonical_path = tmp_path / "canonical.yaml"
+    config_path.write_text(
+        "client: test\nrouting:\n  threshold: 0.60\n  min_margin: 0.05\n"
+        "nivel2:\n  timeout_s: 8.0\n  max_vueltas_tool_use: 4\n"
+        "  max_tokens_respuesta: 1024\n  max_caracteres_resultado_herramienta: 4000\n"
+        "  modelo: claude-sonnet-5\n",
+        encoding="utf-8",
+    )
+    rules_path.write_text(
+        "client: test\nintents:\n  - name: saludo\n    phrases: [\"HOLA\", \"buenas tardes\"]\n",
+        encoding="utf-8",
+    )
+    entities_path.write_text(
+        "client: test\nentity_catalog:\n  region:\n    - value: pance\n      keywords: [\"PANCE\"]\n",
+        encoding="utf-8",
+    )
+    canonical_path.write_text("client: test\nintents: []\n", encoding="utf-8")
+
+    config = cargar_config(config_path, rules_path, entities_path, canonical_path)
+
+    assert config["intents"][0]["phrases_normalizadas"] == ("hola", "buenas tardes")
+    assert config["entity_catalog"]["region"][0]["keywords_normalizadas"] == ("pance",)
+
+
+def test_decision_escalada_defaults():
+    d = _decision_escalada("una clausula", ("un_motivo",))
+    assert d == Decision(
+        intencion=None,
+        nivel=2,
+        confianza=0.0,
+        accion=("escalate_to_llm",),
+        sensitive=False,
+        negada=False,
+        motivos_escalada=("un_motivo",),
+        clausula="una clausula",
+        entidades={},
+        candidato_descartado=None,
+    )
+
+
+def test_decision_escalada_con_todos_los_campos():
+    d = _decision_escalada(
+        "otra clausula",
+        ("motivo_a", "motivo_b"),
+        confianza=0.73,
+        sensitive=True,
+        negada=True,
+        entidades={"region": ["pance"]},
+        candidato_descartado="consultar_calidad_aire",
+    )
+    assert d == Decision(
+        intencion=None,
+        nivel=2,
+        confianza=0.73,
+        accion=("escalate_to_llm",),
+        sensitive=True,
+        negada=True,
+        motivos_escalada=("motivo_a", "motivo_b"),
+        clausula="otra clausula",
+        entidades={"region": ["pance"]},
+        candidato_descartado="consultar_calidad_aire",
+    )

@@ -36,6 +36,15 @@ def log_decision(evento: EventoDecision) -> None:
             "candidato_descartado": d.candidato_descartado,
             "confianza": d.confianza,
             "entidades": d.entidades,
+            "entidades_default": d.entidades_default,
+            "respuesta_texto": d.respuesta_texto,
+            "respuesta_fundamentada": d.respuesta_fundamentada,
+            "herramientas_llamadas": d.herramientas_llamadas,
+            "herramientas_fallidas": d.herramientas_fallidas,
+            "herramienta_pendiente": d.herramienta_pendiente,
+            "tokens_entrada": d.tokens_entrada,
+            "tokens_salida": d.tokens_salida,
+            "latencia_llm_ms": d.latencia_llm_ms,
             "latencia_ms": evento.latencia_ms,
         },
     )
@@ -50,6 +59,24 @@ def hit_rate() -> float:
         1 for e in _eventos if e.decision.nivel in _NIVELES_RESUELTOS_LOCALMENTE
     )
     return resueltos / len(_eventos)
+
+
+def desglose_por_nivel() -> dict[int, int]:
+    """Cuenta de eventos registrados agrupados por nivel de resolucion."""
+    conteo: dict[int, int] = {}
+    for evento in _eventos:
+        nivel = evento.decision.nivel
+        conteo[nivel] = conteo.get(nivel, 0) + 1
+    return conteo
+
+
+def desglose_por_intencion() -> dict[str | None, int]:
+    """Cuenta de eventos registrados agrupados por intencion resuelta (None si escalo sin resolver)."""
+    conteo: dict[str | None, int] = {}
+    for evento in _eventos:
+        intencion = evento.decision.intencion
+        conteo[intencion] = conteo.get(intencion, 0) + 1
+    return conteo
 
 
 def reset() -> None:

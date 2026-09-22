@@ -5,6 +5,8 @@ from typing import Any
 
 import yaml
 
+from intent_router.normalizer import normalize
+
 CAMPOS_ROUTING = ("threshold", "min_margin")
 
 
@@ -12,16 +14,26 @@ class ConfigError(Exception):
     """Config invalida detectada al arranque: el servicio no debe iniciar."""
 
 
-def cargar_config(config_path: Path, rules_path: Path, entities_path: Path) -> dict[str, Any]:
+def cargar_config(config_path: Path, rules_path: Path, entities_path: Path, canonical_path: Path) -> dict[str, Any]:
     """Lee, valida y fusiona config.yaml, rules_nivel0.yaml y entities.yaml en el dict que espera resolve()."""
     config_data = _leer_yaml(config_path)
     rules_data = _leer_yaml(rules_path)
     entities_data = _leer_yaml(entities_path)
+    canonical_data = _leer_yaml(canonical_path)
+    entity_catalog = _validar_entity_catalog(entities_data, entities_path)
+    intents = _validar_intents(rules_data, rules_path)
+    _precomputar_normalizaciones(intents, entity_catalog)
+    _validar_consistencia_accion(intents, canonical_data, rules_path, canonical_path)
+    acciones_declaradas, acciones_sensibles = _derivar_acciones(intents, canonical_data.get("intents", []))
     return {
         "client": _validar_client(config_data, config_path),
         "routing": _validar_routing(config_data, config_path),
-        "intents": _validar_intents(rules_data, rules_path),
-        "entity_catalog": _validar_entity_catalog(entities_data, entities_path),
+        "intents": intents,
+        "entity_catalog": entity_catalog,
+        "entity_defaults": _validar_entity_defaults(config_data, entity_catalog, config_path, entities_path),
+        "nivel2": _validar_nivel2(config_data, config_path),
+        "acciones_declaradas": acciones_declaradas,
+        "acciones_sensibles": acciones_sensibles,
     }
 
 
@@ -120,3 +132,125 @@ def _validar_entrada_entidad(tipo: str, entrada: Any, path: Path) -> str:
     if not isinstance(keywords, list) or not keywords or not all(isinstance(k, str) and k for k in keywords):
         raise ConfigError(f"{path}: entity_catalog.{tipo}.{valor} necesita 'keywords' como lista no vacia de strings")
     return valor
+
+
+def _validar_consistencia_accion(
+    rules_intents: list[dict[str, Any]],
+    canonical_data: dict[str, Any],
+    rules_path: Path,
+    canonical_path: Path,
+) -> None:
+    """Exige que un mismo intent name declare la misma action en rules_nivel0.yaml y canonical.yaml."""
+    acciones_canonical = {
+        intent["name"]: tuple(intent.get("action", []))
+        for intent in canonical_data.get("intents", [])
+        if isinstance(intent, dict) and isinstance(intent.get("name"), str)
+    }
+    for intent in rules_intents:
+        nombre = intent["name"]
+        if nombre not in acciones_canonical:
+            continue
+        accion_rules = tuple(intent.get("action", []))
+        accion_canonical = acciones_canonical[nombre]
+        if accion_rules != accion_canonical:
+            raise ConfigError(
+                f"'{nombre}' declara action distinta en {rules_path} ({list(accion_rules)}) "
+                f"y en {canonical_path} ({list(accion_canonical)})"
+            )
+
+
+def _precomputar_normalizaciones(
+    intents: list[dict[str, Any]],
+    entity_catalog: dict[str, list[dict[str, Any]]],
+) -> None:
+    """Normaliza una sola vez, al cargar la config, las phrases de cada intent y las keywords de cada entidad."""
+    for intent in intents:
+        intent["phrases_normalizadas"] = tuple(normalize(p) for p in intent.get("phrases", []))
+    for entradas in entity_catalog.values():
+        for entrada in entradas:
+            entrada["keywords_normalizadas"] = tuple(normalize(k) for k in entrada.get("keywords", []))
+
+
+def _derivar_acciones(
+    rules_intents: list[dict[str, Any]],
+    canonical_intents: list[dict[str, Any]],
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Deriva el set de todas las acciones declaradas y el subset que pertenece a un intent sensitive:true."""
+    declaradas: set[str] = set()
+    sensibles: set[str] = set()
+    for intent in (*rules_intents, *canonical_intents):
+        if not isinstance(intent, dict):
+            continue
+        acciones = intent.get("action", [])
+        if not isinstance(acciones, list):
+            continue
+        declaradas.update(acciones)
+        if intent.get("sensitive") is True:
+            sensibles.update(acciones)
+    return frozenset(declaradas), frozenset(sensibles)
+
+
+def _validar_nivel2(data: dict[str, Any], path: Path) -> dict[str, Any]:
+    """Exige la seccion 'nivel2' completa, sin defaults implicitos."""
+    nivel2 = data.get("nivel2")
+    if not isinstance(nivel2, dict):
+        raise ConfigError(f"{path}: falta la seccion 'nivel2' obligatoria")
+    return {
+        "timeout_s": _validar_positivo(nivel2, "timeout_s", path),
+        "max_vueltas_tool_use": int(_validar_positivo(nivel2, "max_vueltas_tool_use", path)),
+        "max_tokens_respuesta": int(_validar_positivo(nivel2, "max_tokens_respuesta", path)),
+        "max_caracteres_resultado_herramienta": int(
+            _validar_positivo(nivel2, "max_caracteres_resultado_herramienta", path)
+        ),
+        "modelo": _validar_modelo_nivel2(nivel2, path),
+    }
+
+
+def _validar_positivo(nivel2: dict[str, Any], campo: str, path: Path) -> float:
+    """Exige que nivel2[campo] sea numerico y mayor a cero."""
+    if campo not in nivel2:
+        raise ConfigError(f"{path}: falta 'nivel2.{campo}' obligatorio")
+    valor = nivel2[campo]
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        raise ConfigError(f"{path}: 'nivel2.{campo}' debe ser numerico, recibido {valor!r}")
+    if valor <= 0:
+        raise ConfigError(f"{path}: 'nivel2.{campo}' debe ser mayor a cero: {valor}")
+    return float(valor)
+
+
+def _validar_modelo_nivel2(nivel2: dict[str, Any], path: Path) -> str:
+    """Exige que nivel2.modelo sea un string no vacio."""
+    modelo = nivel2.get("modelo")
+    if not isinstance(modelo, str) or not modelo:
+        raise ConfigError(f"{path}: 'nivel2.modelo' es obligatorio y debe ser un string no vacio")
+    return modelo
+
+
+def _validar_entity_defaults(
+    config_data: dict[str, Any],
+    entity_catalog: dict[str, list[dict[str, Any]]],
+    config_path: Path,
+    entities_path: Path,
+) -> dict[str, str]:
+    """Exige que cada default declarado apunte a un tipo y value que existan en entity_catalog."""
+    defaults = config_data.get("entity_defaults", {})
+    if not isinstance(defaults, dict):
+        raise ConfigError(f"{config_path}: 'entity_defaults' debe ser un mapping de tipo -> value")
+
+    resultado: dict[str, str] = {}
+    for tipo, valor in defaults.items():
+        if not isinstance(valor, str) or not valor:
+            raise ConfigError(f"{config_path}: entity_defaults.{tipo} debe ser un string no vacio")
+        if tipo not in entity_catalog:
+            raise ConfigError(
+                f"{config_path}: entity_defaults.{tipo} declara un tipo que no existe en "
+                f"entity_catalog ({entities_path})"
+            )
+        valores_validos = {entrada["value"] for entrada in entity_catalog[tipo]}
+        if valor not in valores_validos:
+            raise ConfigError(
+                f"{config_path}: entity_defaults.{tipo}='{valor}' no es un value declarado en "
+                f"entity_catalog.{tipo} ({entities_path})"
+            )
+        resultado[tipo] = valor
+    return resultado

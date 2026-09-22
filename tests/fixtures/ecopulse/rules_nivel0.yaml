@@ -35,6 +35,15 @@
 # navegacion/despliegue de UI de solo lectura), por eso sensitive: false
 # en todas. El campo esta declarado desde ya por regla de arquitectura,
 # aunque hoy no haya ningun caso true.
+#
+# consultar_pronostico (2026-09-20): agent_core.py disparaba
+# action: ["navigate"] para este intent, pero la auditoria real del
+# backend que produjo canonical.yaml v2 confirmo que no existe endpoint
+# de pronostico -- quedo alli como action: [] (reconocida-sin-capacidad).
+# Un mismo name con action distinta segun el nivel que lo resuelva es la
+# clase de silencio que config_loader.py ahora rechaza al arranque
+# (_validar_consistencia_accion); esta linea se corrigio para que las dos
+# fuentes digan lo mismo, no al reves.
 
 client: ecopulse
 
@@ -65,7 +74,7 @@ intents:
       - "pronostico"
       - "prediccion"
     entity: []
-    action: ["navigate"]
+    action: []
     sensitive: false
 
   - name: consultar_ruta_saludable

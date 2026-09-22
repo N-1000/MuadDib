@@ -1,0 +1,31 @@
+# config.yaml v1 — EcoPulse
+#
+# Parametros operativos y de comportamiento del agente y router.
+# No define intenciones (eso vive en canonical.yaml) ni reglas deterministas (rules_nivel0.yaml).
+
+client: ecopulse
+
+routing:
+  # Calibrado con el corpus de 67 mensajes reales de frases.txt
+  # Techo maximo medido de saludos y cortesias en Nivel 1 es 0.5782
+  threshold: 0.60
+  # Debajo de 0.05 los aciertos del modelo son empates tecnicos inestables
+  min_margin: 0.05
+
+# Default explicito por tipo de entidad: si el mensaje no menciona el
+# periodo, el router lo asume en vez de despachar show_trend sin saber si
+# es 24h o mensual. Escrito aca, no adivinado por el anfitrion -- y queda
+# registrado en Decision.entidades_default cuando se aplica, para
+# distinguir "el usuario pidio mensual" de "se asumio 24h".
+entity_defaults:
+  periodo: "24h"
+
+# Limites y modelo del motor de Nivel 2 (escalada con tool-use). Sin
+# defaults implicitos, mismo criterio que routing: si falta uno, el
+# servicio no arranca.
+nivel2:
+  timeout_s: 8.0
+  max_vueltas_tool_use: 4
+  max_tokens_respuesta: 1024
+  max_caracteres_resultado_herramienta: 4000
+  modelo: "claude-sonnet-5"

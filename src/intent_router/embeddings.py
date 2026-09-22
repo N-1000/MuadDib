@@ -56,6 +56,24 @@ def encode(texto: str, modelo: SentenceTransformer | None = None) -> np.ndarray:
     return np.asarray(vec, dtype=np.float32)
 
 
+def _validar_sensitive(item: dict[str, Any]) -> bool:
+    """Exige que 'sensitive', si esta declarado, sea un bool estricto."""
+    if "sensitive" not in item:
+        return False
+    valor = item["sensitive"]
+    if not isinstance(valor, bool):
+        raise ValueError(f"intent '{item.get('name')}': 'sensitive' debe ser bool, recibido {valor!r}")
+    return valor
+
+
+def _validar_action(item: dict[str, Any]) -> tuple[str, ...]:
+    """Exige que 'action', si esta declarada, sea una lista de strings (nunca un string suelto)."""
+    valor = item.get("action", [])
+    if not isinstance(valor, list) or not all(isinstance(a, str) for a in valor):
+        raise ValueError(f"intent '{item.get('name')}': 'action' debe ser una lista de strings, recibido {valor!r}")
+    return tuple(valor)
+
+
 def precompute_canonical(
     config: dict[str, Any],
     modelo: SentenceTransformer | None = None,
@@ -91,8 +109,8 @@ def precompute_canonical(
         nombres.append(nombre)
         centroides_list.append(np.asarray(centroide_unitario, dtype=np.float32))
         conteo_frases.append(len(frases_norm))
-        sensibles.append(bool(item.get("sensitive", False)))
-        acciones.append(tuple(item.get("action", [])))
+        sensibles.append(_validar_sensitive(item))
+        acciones.append(_validar_action(item))
         tipos_entidad.append(tuple(item.get("entity", [])))
         cardinalidades.append(item.get("entity_cardinality"))
 
